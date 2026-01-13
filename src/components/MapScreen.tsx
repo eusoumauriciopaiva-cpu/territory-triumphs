@@ -17,17 +17,27 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
   const [followUser, setFollowUser] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
 
-  // Auto-locate user on mount
+  // Watch user position continuously with maximum precision
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setUserPosition([pos.coords.latitude, pos.coords.longitude]);
-        setFollowUser(true);
-        setTimeout(() => setFollowUser(false), 1000);
       },
       () => {},
-      { enableHighAccuracy: true }
+      { 
+        enableHighAccuracy: true,  // Use GPS for maximum precision
+        timeout: 10000,            // Wait up to 10s for position
+        maximumAge: 0              // Always get fresh position, no cache
+      }
     );
+
+    // Initial follow
+    setFollowUser(true);
+    setTimeout(() => setFollowUser(false), 1500);
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
   }, []);
 
   const handleLocate = () => {
@@ -38,7 +48,11 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
         setTimeout(() => setFollowUser(false), 2000);
       },
       () => {},
-      { enableHighAccuracy: true }
+      { 
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
     );
   };
 
