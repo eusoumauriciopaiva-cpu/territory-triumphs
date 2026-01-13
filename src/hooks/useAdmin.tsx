@@ -3,6 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import type { Conquest } from '@/types';
 
+// Master admin email - only this user has access to command center
+const MASTER_ADMIN_EMAIL = 'eusoumauriciopaiva1@gmail.com';
+
 interface AdminProfile {
   id: string;
   user_id: string;
@@ -35,28 +38,31 @@ interface AdminConquest {
 }
 
 /**
- * Hook to check if user is an admin
+ * Hook to check if user is the Master Admin
+ * Only eusoumauriciopaiva1@gmail.com has access
  */
 export function useIsAdmin() {
   const { user } = useAuth();
   
   return useQuery({
-    queryKey: ['is-admin', user?.id],
+    queryKey: ['is-admin', user?.id, user?.email],
     queryFn: async () => {
       if (!user) return false;
       
-      // Use the is_admin RPC function
+      // First check: email must match master admin
+      if (user.email !== MASTER_ADMIN_EMAIL) {
+        return false;
+      }
+      
+      // Second check: verify in database using RPC function
       const { data, error } = await supabase.rpc('is_admin', { 
         _user_id: user.id 
       });
       
       if (error) {
         console.error('Error checking admin status:', error);
-        // Fallback: check if user is developer
-        const { data: isDev } = await supabase.rpc('is_developer', { 
-          _user_id: user.id 
-        });
-        return isDev === true;
+        // Fallback: check email only for master admin
+        return user.email === MASTER_ADMIN_EMAIL;
       }
       
       return data === true;
@@ -64,6 +70,13 @@ export function useIsAdmin() {
     enabled: !!user,
     staleTime: 300000, // 5 minutes
   });
+}
+
+/**
+ * Get the master admin email for display purposes
+ */
+export function getMasterAdminEmail() {
+  return MASTER_ADMIN_EMAIL;
 }
 
 /**

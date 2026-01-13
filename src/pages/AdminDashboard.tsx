@@ -39,14 +39,16 @@ export default function AdminDashboard() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
 
-  // Redirect if not authenticated or not admin
+  // Redirect if not authenticated or not the master admin
+  // SECURITY: Only eusoumauriciopaiva1@gmail.com can access this dashboard
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/');
       return;
     }
     
-    if (!adminLoading && isAdmin === false) {
+    // Block access if not admin or email doesn't match
+    if (!adminLoading && (isAdmin === false || user?.email !== 'eusoumauriciopaiva1@gmail.com')) {
       navigate('/');
     }
   }, [authLoading, user, adminLoading, isAdmin, navigate]);
