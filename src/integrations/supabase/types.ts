@@ -239,6 +239,21 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_rank"]
       }
       generate_unique_code: { Args: never; Returns: string }
+      get_all_conquests_admin: {
+        Args: never
+        Returns: {
+          area: number
+          created_at: string
+          distance: number
+          duration: number
+          id: string
+          path: Json
+          profile_name: string
+          profile_nickname: string
+          trail_color: string
+          user_id: string
+        }[]
+      }
       get_all_profiles_admin: {
         Args: never
         Returns: {
@@ -266,9 +281,11 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_developer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      admin_role: "user" | "admin"
       app_rank:
         | "bronze"
         | "silver"
@@ -406,6 +423,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role: ["user", "admin"],
       app_rank: [
         "bronze",
         "silver",
