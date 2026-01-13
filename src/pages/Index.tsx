@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -9,9 +9,10 @@ import { FeedScreen } from '@/components/FeedScreen';
 import { MapScreen } from '@/components/MapScreen';
 import { GroupsScreen } from '@/components/GroupsScreen';
 import { ProfileScreen } from '@/components/ProfileScreen';
-import { RecordOverlay } from '@/components/RecordOverlay';
+import { RecordingDashboard } from '@/components/RecordingDashboard';
 import { AuthScreen } from '@/components/AuthScreen';
-import type { Conquest } from '@/types';
+import { SplashScreen } from '@/components/SplashScreen';
+import type { Conquest, RecordMode } from '@/types';
 
 function AppContent() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -19,9 +20,27 @@ function AppContent() {
   const { conquests, myConquests, addConquest } = useConquests();
   const { groups, myMemberships, createGroup, joinGroup, leaveGroup } = useGroups();
 
+  const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('feed');
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [selectedConquest, setSelectedConquest] = useState<Conquest | null>(null);
+
+  // Show splash screen only on first load
+  useEffect(() => {
+    const hasSeenSplash = sessionStorage.getItem('zonna_splash_seen');
+    if (hasSeenSplash) {
+      setShowSplash(false);
+    }
+  }, []);
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('zonna_splash_seen', 'true');
+    setShowSplash(false);
+  };
+
+  if (showSplash) {
+    return <SplashScreen onComplete={handleSplashComplete} />;
+  }
 
   if (authLoading) {
     return (
@@ -35,9 +54,19 @@ function AppContent() {
     return <AuthScreen />;
   }
 
-  const handleFinishConquest = async (data: { path: [number, number][]; area: number; distance: number }) => {
+  const handleFinishConquest = async (data: { 
+    path: [number, number][]; 
+    area: number; 
+    distance: number;
+    duration: number;
+    mode: RecordMode;
+  }) => {
     try {
-      await addConquest.mutateAsync(data);
+      await addConquest.mutateAsync({
+        path: data.path,
+        area: data.area,
+        distance: data.distance,
+      });
     } catch (error) {
       console.error('Failed to save conquest:', error);
     }
@@ -101,10 +130,11 @@ function AppContent() {
 
       <AnimatePresence>
         {isRecordOpen && (
-          <RecordOverlay
+          <RecordingDashboard
             isOpen={isRecordOpen}
             onClose={() => setIsRecordOpen(false)}
             onFinish={handleFinishConquest}
+            conquestCount={myConquests.length}
           />
         )}
       </AnimatePresence>
