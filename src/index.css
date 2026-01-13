@@ -204,6 +204,20 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Safe area for top */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
 /* MapLibre overrides */
 .maplibregl-map {
   font-family: 'Inter', system-ui, sans-serif;
