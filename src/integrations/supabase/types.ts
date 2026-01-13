@@ -19,6 +19,7 @@ export type Database = {
           area: number
           created_at: string
           distance: number
+          duration: number | null
           id: string
           path: Json
           user_id: string
@@ -27,6 +28,7 @@ export type Database = {
           area: number
           created_at?: string
           distance: number
+          duration?: number | null
           id?: string
           path: Json
           user_id: string
@@ -35,6 +37,7 @@ export type Database = {
           area?: number
           created_at?: string
           distance?: number
+          duration?: number | null
           id?: string
           path?: Json
           user_id?: string
@@ -97,8 +100,11 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          best_streak: number
           created_at: string
+          current_streak: number
           id: string
+          last_activity_date: string | null
           level: number
           name: string
           rank: Database["public"]["Enums"]["app_rank"]
@@ -110,8 +116,11 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          best_streak?: number
           created_at?: string
+          current_streak?: number
           id?: string
+          last_activity_date?: string | null
           level?: number
           name?: string
           rank?: Database["public"]["Enums"]["app_rank"]
@@ -123,8 +132,11 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          best_streak?: number
           created_at?: string
+          current_streak?: number
           id?: string
+          last_activity_date?: string | null
           level?: number
           name?: string
           rank?: Database["public"]["Enums"]["app_rank"]
