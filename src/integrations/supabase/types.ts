@@ -208,6 +208,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["dev_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["dev_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["dev_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -218,6 +239,34 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_rank"]
       }
       generate_unique_code: { Args: never; Returns: string }
+      get_all_profiles_admin: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          best_streak: number
+          created_at: string
+          current_streak: number
+          email: string
+          id: string
+          level: number
+          name: string
+          nickname: string
+          rank: Database["public"]["Enums"]["app_rank"]
+          total_area: number
+          total_km: number
+          unique_code: string
+          user_id: string
+          xp: number
+        }[]
+      }
+      has_dev_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["dev_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_developer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_rank:
@@ -229,6 +278,7 @@ export type Database = {
         | "master"
         | "grandmaster"
         | "emperor"
+      dev_role: "admin" | "developer" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -366,6 +416,7 @@ export const Constants = {
         "grandmaster",
         "emperor",
       ],
+      dev_role: ["admin", "developer", "user"],
     },
   },
 } as const
