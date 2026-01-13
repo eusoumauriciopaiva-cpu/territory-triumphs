@@ -4,6 +4,8 @@ import { X, Play, Square, Trophy, MapPin, AlertCircle, Flame, Target, Share2 } f
 import { Button } from './ui/button';
 import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaSnapshot } from './ZonnaSnapshot';
+import { TrackingNotificationBar } from './TrackingNotificationBar';
+import { DominateButton } from './DominateButton';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import type { RecordMode } from '@/types';
@@ -207,6 +209,10 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
     onClose();
   };
 
+  // Calculate pace
+  const pace = distance > 0 ? (seconds / 60) / distance : 0;
+  const canDominate = distance >= 0.5; // 500m minimum for dominate
+
   if (!isOpen) return null;
 
   return (
@@ -217,6 +223,14 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       className="fixed inset-0 bg-background z-[10000] flex flex-col"
     >
+      {/* Persistent Notification Bar (ZONNA Command Center) */}
+      <TrackingNotificationBar
+        isVisible={isRecording}
+        pace={pace}
+        distance={distance * 1000} // Convert to meters
+        duration={seconds}
+      />
+
       {/* Map Background */}
       <div className="absolute inset-0 z-0">
         <ZonnaMap3D
@@ -401,6 +415,18 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
               </div>
             )}
           </div>
+
+          {/* Dominate Button - Standalone prominent button */}
+          {isRecording && mode === 'livre' && (
+            <div className="mt-4">
+              <DominateButton
+                isEnabled={canDominate}
+                distance={distance * 1000} // meters
+                minDistance={500}
+                onDominate={handleFinishLivre}
+              />
+            </div>
+          )}
         </motion.div>
       </div>
 
