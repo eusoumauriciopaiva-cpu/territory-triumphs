@@ -322,11 +322,39 @@ export function applyZonnaStyleOverrides(map: maplibregl.Map) {
   });
 }
 
-// Satellite style URL (using MapTiler satellite)
-export const SATELLITE_STYLE = 'https://api.maptiler.com/maps/hybrid/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL';
+// ESRI Satellite Style (free, no API key required)
+export const SATELLITE_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  name: 'ZONNA Satellite',
+  sources: {
+    'esri-satellite': {
+      type: 'raster',
+      tiles: [
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+      ],
+      tileSize: 256,
+      attribution: 'Esri, Maxar, Earthstar Geographics',
+      maxzoom: 19,
+    },
+  },
+  layers: [
+    {
+      id: 'satellite-layer',
+      type: 'raster',
+      source: 'esri-satellite',
+      minzoom: 0,
+      maxzoom: 22,
+      paint: {
+        'raster-opacity': 1,
+        'raster-saturation': 0.1,
+        'raster-contrast': 0.1,
+      },
+    },
+  ],
+};
 
-// Get style URL by type
-export function getMapStyleUrl(styleType: MapStyleType): string {
+// Get style by type
+export function getMapStyleUrl(styleType: MapStyleType): string | maplibregl.StyleSpecification {
   switch (styleType) {
     case 'satellite':
       return SATELLITE_STYLE;
