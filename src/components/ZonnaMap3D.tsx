@@ -301,14 +301,18 @@ export function ZonnaMap3D({
     markerObjRef.current = new maplibregl.Marker({ element: el })
       .setLngLat([userPosition[1], userPosition[0]])
       .addTo(map.current);
+  }, [userPosition, loaded, mapStyle]);
 
-    if (followUser) {
-      map.current.easeTo({
-        center: [userPosition[1], userPosition[0]],
-        duration: 500,
-      });
-    }
-  }, [userPosition, followUser, loaded, mapStyle]);
+  // Smooth camera follow - like Uber
+  useEffect(() => {
+    if (!map.current || !loaded || !userPosition || !followUser) return;
+
+    map.current.easeTo({
+      center: [userPosition[1], userPosition[0]],
+      duration: 800,
+      easing: (t) => t * (2 - t), // Smooth easeOut
+    });
+  }, [userPosition, followUser, loaded]);
 
   // Update recording path
   useEffect(() => {

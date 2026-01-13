@@ -14,38 +14,14 @@ interface MapScreenProps {
 
 export function MapScreen({ conquests, selectedConquest, onSelectConquest }: MapScreenProps) {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
-  const [followUser, setFollowUser] = useState(false);
+  const [followUser, setFollowUser] = useState(true); // Always follow by default
   const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
 
-  // Watch user position continuously with maximum precision
+  // Watch user position continuously with maximum precision - always follow like Uber
   useEffect(() => {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setUserPosition([pos.coords.latitude, pos.coords.longitude]);
-      },
-      () => {},
-      { 
-        enableHighAccuracy: true,  // Use GPS for maximum precision
-        timeout: 10000,            // Wait up to 10s for position
-        maximumAge: 0              // Always get fresh position, no cache
-      }
-    );
-
-    // Initial follow
-    setFollowUser(true);
-    setTimeout(() => setFollowUser(false), 1500);
-
-    return () => {
-      navigator.geolocation.clearWatch(watchId);
-    };
-  }, []);
-
-  const handleLocate = () => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserPosition([pos.coords.latitude, pos.coords.longitude]);
-        setFollowUser(true);
-        setTimeout(() => setFollowUser(false), 2000);
       },
       () => {},
       { 
@@ -54,6 +30,14 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
         maximumAge: 0
       }
     );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
+
+  const handleLocate = () => {
+    setFollowUser(true); // Re-enable follow mode
   };
 
   return (
