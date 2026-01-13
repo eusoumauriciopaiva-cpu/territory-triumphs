@@ -63,6 +63,7 @@ export default function AdminDashboard() {
     return group.group_members?.map((m: any) => m.user_id) || [];
   };
 
+  // Show loading state
   if (authLoading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -76,8 +77,25 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isAdmin) {
-    return null;
+  // Show access denied message instead of blank page
+  if (!isAdmin || user?.email !== 'eusoumauriciopaiva1@gmail.com') {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center p-8">
+          <Shield className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h1 className="text-xl font-black text-foreground mb-2 font-mono">
+            ACESSO NEGADO
+          </h1>
+          <p className="text-muted-foreground font-mono text-sm mb-6">
+            Área restrita ao Administrador Master
+          </p>
+          <Button onClick={() => navigate('/')} className="font-mono">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            VOLTAR
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const totalArea = profiles?.reduce((sum, p) => sum + p.total_area, 0) || 0;
@@ -198,6 +216,18 @@ export default function AdminDashboard() {
                       <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
                       <p className="text-muted-foreground font-mono text-sm">
                         CARREGANDO HEATMAP GLOBAL...
+                      </p>
+                    </div>
+                  </div>
+                ) : conquests?.length === 0 ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground font-mono text-sm">
+                        NENHUM TERRITÓRIO CONQUISTADO
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Os rastros aparecerão quando atletas começarem a correr
                       </p>
                     </div>
                   </div>
