@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Edit2, Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield } from 'lucide-react';
+import { Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -8,12 +7,12 @@ import { EloBadge, XPProgressBar, StreakBadge } from './EloSystem';
 import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaCodex } from './ZonnaCodex';
 import { AvatarUpload } from './AvatarUpload';
+import { AdminCommandPanel } from './AdminCommandPanel';
 import { useNicknameValidation, validateNicknameFormat } from '@/hooks/useNicknameValidation';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import type { Profile, Conquest } from '@/types';
 import { RANK_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
-
 interface ProfileScreenProps {
   profile: Profile | null;
   history: Conquest[];
@@ -29,12 +28,11 @@ export function ProfileScreen({
   onShowOnMap,
   onSignOut 
 }: ProfileScreenProps) {
-  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile?.name || '');
   const [nickname, setNickname] = useState(profile?.nickname || '');
   const [showHeatmap, setShowHeatmap] = useState(false);
-  const [activeSection, setActiveSection] = useState<'stats' | 'codex' | 'history'>('stats');
+  const [activeSection, setActiveSection] = useState<'stats' | 'codex' | 'history' | 'admin'>('stats');
   
   // Check if user is admin
   const { data: isAdmin } = useIsAdmin();
@@ -210,6 +208,7 @@ export function ProfileScreen({
           { id: 'stats', label: 'Stats' },
           { id: 'codex', label: 'Codex' },
           { id: 'history', label: 'Domínios' },
+          ...(isAdmin === true ? [{ id: 'admin', label: 'Admin', icon: Shield }] : []),
         ].map((tab) => (
           <button
             key={tab.id}
@@ -333,18 +332,9 @@ export function ProfileScreen({
         </div>
       )}
 
-      {/* Admin Command Center - Only visible to master admin (eusoumauriciopaiva1@gmail.com) */}
-      {isAdmin === true && (
-        <div className="mt-4">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/dev')}
-            className="w-full border-primary/50 bg-primary/5 text-primary hover:bg-primary/10 font-mono uppercase tracking-wider"
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            PAINEL DE CONTROLE ZONNA
-          </Button>
-        </div>
+      {/* Admin Command Panel - Inline for master admin */}
+      {activeSection === 'admin' && isAdmin === true && (
+        <AdminCommandPanel />
       )}
 
       {/* Sign Out - Always visible at bottom */}
