@@ -1,4 +1,4 @@
-import { Moon, Satellite } from 'lucide-react';
+import { Map, Satellite } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import type { MapStyleType } from '@/lib/mapStyle';
@@ -11,7 +11,7 @@ interface MapStyleToggleProps {
 
 export function MapStyleToggle({ currentStyle, onStyleChange, className }: MapStyleToggleProps) {
   const toggleStyle = () => {
-    onStyleChange(currentStyle === 'dark' ? 'satellite' : 'dark');
+    onStyleChange(currentStyle === 'standard' ? 'satellite' : 'standard');
   };
 
   return (
@@ -20,16 +20,16 @@ export function MapStyleToggle({ currentStyle, onStyleChange, className }: MapSt
       size="icon"
       onClick={toggleStyle}
       className={cn(
-        "glass border border-border rounded-full w-12 h-12 transition-all",
+        "glass border border-border rounded-full w-12 h-12 transition-all shadow-lg",
         currentStyle === 'satellite' && "bg-primary/20 border-primary/50",
         className
       )}
-      title={currentStyle === 'dark' ? 'Mudar para Satélite' : 'Mudar para Dark Treino'}
+      title={currentStyle === 'standard' ? 'Mudar para Satélite' : 'Mudar para Mapa'}
     >
-      {currentStyle === 'dark' ? (
+      {currentStyle === 'standard' ? (
         <Satellite className="w-5 h-5" />
       ) : (
-        <Moon className="w-5 h-5 text-primary" />
+        <Map className="w-5 h-5 text-primary" />
       )}
     </Button>
   );

@@ -3,8 +3,8 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { 
   getMapStyleUrl, 
-  applyZonnaStyleOverrides, 
-  needsZonnaOverrides,
+  applyStandardStyleOverrides, 
+  needsStandardOverrides,
   type MapStyleType 
 } from '@/lib/mapStyle';
 
@@ -29,7 +29,7 @@ interface AdminGlobalMapProps {
 export function AdminGlobalMap({ 
   conquests, 
   filterUserIds,
-  mapStyle = 'dark' 
+  mapStyle = 'standard' 
 }: AdminGlobalMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -53,9 +53,9 @@ export function AdminGlobalMap({
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // Apply ZONNA style overrides for dark mode
-      if (needsZonnaOverrides(mapStyle)) {
-        applyZonnaStyleOverrides(map.current);
+      // Apply Standard style overrides for light mode
+      if (needsStandardOverrides(mapStyle)) {
+        applyStandardStyleOverrides(map.current);
       }
 
       // Add global heatmap source

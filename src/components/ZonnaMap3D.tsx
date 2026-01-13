@@ -4,8 +4,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Conquest } from '@/types';
 import { 
   getMapStyleUrl, 
-  applyZonnaStyleOverrides, 
-  needsZonnaOverrides,
+  applyStandardStyleOverrides, 
+  needsStandardOverrides,
   type MapStyleType 
 } from '@/lib/mapStyle';
 
@@ -174,7 +174,7 @@ export function ZonnaMap3D({
   heatmapMode = false,
   userConquests = [],
   trailColor = '#FF4F00',
-  mapStyle = 'dark',
+  mapStyle = 'standard',
 }: ZonnaMap3DProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -202,9 +202,9 @@ export function ZonnaMap3D({
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // Apply ZONNA High-Contrast Dark style overrides (Strava-inspired) - only for dark mode
-      if (needsZonnaOverrides(mapStyle)) {
-        applyZonnaStyleOverrides(map.current);
+      // Apply Standard style overrides (Google Maps-like) - only for standard mode
+      if (needsStandardOverrides(mapStyle)) {
+        applyStandardStyleOverrides(map.current);
       }
 
       // Setup all map layers using helper function
@@ -260,9 +260,9 @@ export function ZonnaMap3D({
       map.current.setPitch(currentPitch);
       map.current.setBearing(currentBearing);
 
-      // Apply overrides for dark mode
-      if (needsZonnaOverrides(mapStyle)) {
-        applyZonnaStyleOverrides(map.current);
+      // Apply overrides for standard mode
+      if (needsStandardOverrides(mapStyle)) {
+        applyStandardStyleOverrides(map.current);
       }
 
       // Re-add sources and layers

@@ -1,14 +1,13 @@
 import maplibregl from 'maplibre-gl';
 
-// Map style types
-export type MapStyleType = 'dark' | 'satellite';
+// Map style types - now includes 'standard' for Google Maps-like appearance
+export type MapStyleType = 'standard' | 'satellite';
 
-// ZONNA High-Contrast Dark Map Style (Strava-inspired)
-// Focused on natural areas visibility and clean training aesthetics
-
-export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
+// ZONNA Standard Style - Google Maps-like appearance
+// Light theme with green parks, white roads, blue water
+export const ZONNA_STANDARD_STYLE: maplibregl.StyleSpecification = {
   version: 8,
-  name: 'ZONNA Dark',
+  name: 'ZONNA Standard',
   sources: {
     openmaptiles: {
       type: 'vector',
@@ -17,26 +16,26 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
   },
   glyphs: 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
   layers: [
-    // Background - Dark charcoal
+    // Background - Light gray (Google Maps style)
     {
       id: 'background',
       type: 'background',
       paint: {
-        'background-color': '#1a1a1b',
+        'background-color': '#f5f5f5',
       },
     },
-    // Land areas
+    // Land areas - Light beige/cream
     {
       id: 'landcover',
       type: 'fill',
       source: 'openmaptiles',
       'source-layer': 'landcover',
       paint: {
-        'fill-color': '#1a1a1b',
+        'fill-color': '#f5f5f5',
         'fill-opacity': 1,
       },
     },
-    // Natural/Forest - Dark moss green (Strava style)
+    // Natural/Forest - Light green (Google Maps style)
     {
       id: 'landcover-grass',
       type: 'fill',
@@ -44,7 +43,7 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
       'source-layer': 'landcover',
       filter: ['==', 'class', 'grass'],
       paint: {
-        'fill-color': '#1b2d26',
+        'fill-color': '#c8e6c9',
         'fill-opacity': 1,
       },
     },
@@ -55,18 +54,18 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
       'source-layer': 'landcover',
       filter: ['==', 'class', 'wood'],
       paint: {
-        'fill-color': '#1b2d26',
+        'fill-color': '#a5d6a7',
         'fill-opacity': 1,
       },
     },
-    // Parks - Dark moss green
+    // Parks - Light green
     {
       id: 'park',
       type: 'fill',
       source: 'openmaptiles',
       'source-layer': 'park',
       paint: {
-        'fill-color': '#1b2d26',
+        'fill-color': '#c8e6c9',
         'fill-opacity': 1,
       },
     },
@@ -82,18 +81,18 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
         ['==', 'class', 'playground'],
       ],
       paint: {
-        'fill-color': '#1b2d26',
+        'fill-color': '#c8e6c9',
         'fill-opacity': 1,
       },
     },
-    // Water - Deep black
+    // Water - Light blue (Google Maps style)
     {
       id: 'water',
       type: 'fill',
       source: 'openmaptiles',
       'source-layer': 'water',
       paint: {
-        'fill-color': '#111111',
+        'fill-color': '#a0d4e7',
         'fill-opacity': 1,
       },
     },
@@ -103,22 +102,40 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
       source: 'openmaptiles',
       'source-layer': 'waterway',
       paint: {
-        'line-color': '#111111',
+        'line-color': '#a0d4e7',
         'line-width': 2,
       },
     },
-    // Buildings
+    // Buildings - Light gray
     {
       id: 'building',
       type: 'fill',
       source: 'openmaptiles',
       'source-layer': 'building',
       paint: {
-        'fill-color': '#252525',
-        'fill-opacity': 0.8,
+        'fill-color': '#e8e8e8',
+        'fill-opacity': 0.9,
       },
     },
-    // Minor roads
+    // Minor roads - White with light gray outline
+    {
+      id: 'road-minor-outline',
+      type: 'line',
+      source: 'openmaptiles',
+      'source-layer': 'transportation',
+      filter: ['all',
+        ['==', '$type', 'LineString'],
+        ['in', 'class', 'minor', 'service', 'path', 'track'],
+      ],
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+      paint: {
+        'line-color': '#d9d9d9',
+        'line-width': 3,
+      },
+    },
     {
       id: 'road-minor',
       type: 'line',
@@ -133,11 +150,29 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
         'line-join': 'round',
       },
       paint: {
-        'line-color': '#2a2a2a',
-        'line-width': 1,
+        'line-color': '#ffffff',
+        'line-width': 2,
       },
     },
-    // Secondary roads
+    // Secondary roads - White with gray outline
+    {
+      id: 'road-secondary-outline',
+      type: 'line',
+      source: 'openmaptiles',
+      'source-layer': 'transportation',
+      filter: ['all',
+        ['==', '$type', 'LineString'],
+        ['in', 'class', 'secondary', 'tertiary'],
+      ],
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+      paint: {
+        'line-color': '#d9d9d9',
+        'line-width': 5,
+      },
+    },
     {
       id: 'road-secondary',
       type: 'line',
@@ -152,11 +187,29 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
         'line-join': 'round',
       },
       paint: {
-        'line-color': '#333333',
-        'line-width': 2,
+        'line-color': '#ffffff',
+        'line-width': 4,
       },
     },
-    // Primary roads
+    // Primary roads - White with gray outline
+    {
+      id: 'road-primary-outline',
+      type: 'line',
+      source: 'openmaptiles',
+      'source-layer': 'transportation',
+      filter: ['all',
+        ['==', '$type', 'LineString'],
+        ['==', 'class', 'primary'],
+      ],
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+      paint: {
+        'line-color': '#d9d9d9',
+        'line-width': 7,
+      },
+    },
     {
       id: 'road-primary',
       type: 'line',
@@ -171,11 +224,29 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
         'line-join': 'round',
       },
       paint: {
-        'line-color': '#383838',
-        'line-width': 3,
+        'line-color': '#ffffff',
+        'line-width': 6,
       },
     },
-    // Main highways
+    // Main highways - Yellow/Orange (Google Maps style)
+    {
+      id: 'road-highway-outline',
+      type: 'line',
+      source: 'openmaptiles',
+      'source-layer': 'transportation',
+      filter: ['all',
+        ['==', '$type', 'LineString'],
+        ['in', 'class', 'motorway', 'trunk'],
+      ],
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round',
+      },
+      paint: {
+        'line-color': '#e5a83a',
+        'line-width': 9,
+      },
+    },
     {
       id: 'road-highway',
       type: 'line',
@@ -190,11 +261,11 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
         'line-join': 'round',
       },
       paint: {
-        'line-color': '#383838',
-        'line-width': 4,
+        'line-color': '#fdd835',
+        'line-width': 8,
       },
     },
-    // Street labels - White at 60% opacity
+    // Street labels - Dark gray
     {
       id: 'road-label',
       type: 'symbol',
@@ -210,9 +281,9 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
         'text-rotation-alignment': 'map',
       },
       paint: {
-        'text-color': 'rgba(255, 255, 255, 0.6)',
-        'text-halo-color': 'rgba(0, 0, 0, 0.5)',
-        'text-halo-width': 1,
+        'text-color': '#333333',
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 2,
       },
     },
     // Place labels (neighborhoods, cities)
@@ -236,22 +307,22 @@ export const ZONNA_DARK_STYLE: maplibregl.StyleSpecification = {
         'text-letter-spacing': 0.1,
       },
       paint: {
-        'text-color': 'rgba(255, 255, 255, 0.6)',
-        'text-halo-color': 'rgba(0, 0, 0, 0.5)',
-        'text-halo-width': 1,
+        'text-color': '#666666',
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 2,
       },
     },
   ],
 } as maplibregl.StyleSpecification;
 
-// Fallback to CartoDB dark style with custom modifications
-export const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+// CartoDB Positron (light style) for Google Maps-like appearance
+export const CARTO_POSITRON_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 
-// Custom style modifications to apply after loading CartoDB style
-export function applyZonnaStyleOverrides(map: maplibregl.Map) {
+// Custom style modifications to apply after loading CartoDB Positron style
+export function applyStandardStyleOverrides(map: maplibregl.Map) {
   // Wait for style to load
   if (!map.isStyleLoaded()) {
-    map.once('style.load', () => applyZonnaStyleOverrides(map));
+    map.once('style.load', () => applyStandardStyleOverrides(map));
     return;
   }
 
@@ -260,16 +331,16 @@ export function applyZonnaStyleOverrides(map: maplibregl.Map) {
   layers.forEach((layer) => {
     const layerId = layer.id;
 
-    // Water - Deep black
+    // Water - Light blue (Google Maps style)
     if (layerId.includes('water')) {
       if (layer.type === 'fill') {
-        map.setPaintProperty(layerId, 'fill-color', '#111111');
+        map.setPaintProperty(layerId, 'fill-color', '#a0d4e7');
       } else if (layer.type === 'line') {
-        map.setPaintProperty(layerId, 'line-color', '#111111');
+        map.setPaintProperty(layerId, 'line-color', '#a0d4e7');
       }
     }
 
-    // Natural areas - Dark moss green (Strava style)
+    // Natural areas - Light green (Google Maps style)
     if (
       layerId.includes('park') ||
       layerId.includes('grass') ||
@@ -280,32 +351,7 @@ export function applyZonnaStyleOverrides(map: maplibregl.Map) {
       layerId.includes('landcover')
     ) {
       if (layer.type === 'fill') {
-        map.setPaintProperty(layerId, 'fill-color', '#1b2d26');
-      }
-    }
-
-    // Background/Land - Dark charcoal
-    if (layerId === 'background' || layerId.includes('land') && !layerId.includes('park')) {
-      if (layer.type === 'background') {
-        map.setPaintProperty(layerId, 'background-color', '#1a1a1b');
-      } else if (layer.type === 'fill' && !layerId.includes('park') && !layerId.includes('wood') && !layerId.includes('grass')) {
-        map.setPaintProperty(layerId, 'fill-color', '#1a1a1b');
-      }
-    }
-
-    // Roads - Medium gray
-    if (layerId.includes('road') || layerId.includes('highway') || layerId.includes('motorway')) {
-      if (layer.type === 'line') {
-        map.setPaintProperty(layerId, 'line-color', '#383838');
-      }
-    }
-
-    // Street labels - White at 60% opacity
-    if (layerId.includes('label') || layerId.includes('name')) {
-      if (layer.type === 'symbol') {
-        map.setPaintProperty(layerId, 'text-color', 'rgba(255, 255, 255, 0.6)');
-        map.setPaintProperty(layerId, 'text-halo-color', 'rgba(0, 0, 0, 0.5)');
-        map.setPaintProperty(layerId, 'text-halo-width', 1);
+        map.setPaintProperty(layerId, 'fill-color', '#c8e6c9');
       }
     }
 
@@ -314,8 +360,7 @@ export function applyZonnaStyleOverrides(map: maplibregl.Map) {
       layerId.includes('poi') ||
       layerId.includes('icon') ||
       layerId.includes('shop') ||
-      layerId.includes('amenity') ||
-      layerId.includes('place-') && !layerId.includes('place-label')
+      layerId.includes('amenity')
     ) {
       map.setLayoutProperty(layerId, 'visibility', 'none');
     }
@@ -358,13 +403,13 @@ export function getMapStyleUrl(styleType: MapStyleType): string | maplibregl.Sty
   switch (styleType) {
     case 'satellite':
       return SATELLITE_STYLE;
-    case 'dark':
+    case 'standard':
     default:
-      return CARTO_DARK_STYLE;
+      return CARTO_POSITRON_STYLE;
   }
 }
 
-// Check if style needs ZONNA overrides
-export function needsZonnaOverrides(styleType: MapStyleType): boolean {
-  return styleType === 'dark';
+// Check if style needs standard overrides (for CartoDB Positron)
+export function needsStandardOverrides(styleType: MapStyleType): boolean {
+  return styleType === 'standard';
 }

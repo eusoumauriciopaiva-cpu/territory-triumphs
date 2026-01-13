@@ -43,7 +43,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
   const [lastStats, setLastStats] = useState({ area: 0, distance: 0, duration: 0, pace: 0 });
   const [showSnapshot, setShowSnapshot] = useState(false);
   const [lastPath, setLastPath] = useState<[number, number][]>([]);
-  const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
+  const [mapStyle, setMapStyle] = useState<MapStyleType>('standard');
 
   const watchId = useRef<number | null>(null);
 
