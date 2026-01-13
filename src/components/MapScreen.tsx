@@ -44,7 +44,7 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [userBearing, setUserBearing] = useState<number>(0);
   const [followUser, setFollowUser] = useState(true);
-  const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
+  const [mapStyle, setMapStyle] = useState<MapStyleType>('standard');
   const lastPositionRef = useRef<[number, number] | null>(null);
 
   // Watch user position continuously with maximum precision
