@@ -11,6 +11,7 @@ import {
 
 interface ZonnaMap3DProps {
   userPosition: [number, number] | null;
+  userBearing?: number;
   followUser?: boolean;
   recordingPath?: [number, number][];
   conquests?: Conquest[];
@@ -164,6 +165,7 @@ function setupMapLayers(mapInstance: maplibregl.Map, trailColor: string, styleTy
 
 export function ZonnaMap3D({
   userPosition,
+  userBearing = 0,
   followUser = false,
   recordingPath = [],
   conquests = [],
@@ -303,16 +305,17 @@ export function ZonnaMap3D({
       .addTo(map.current);
   }, [userPosition, loaded, mapStyle]);
 
-  // Smooth camera follow - like Uber
+  // Smooth camera follow with rotation - like GPS navigation
   useEffect(() => {
     if (!map.current || !loaded || !userPosition || !followUser) return;
 
     map.current.easeTo({
       center: [userPosition[1], userPosition[0]],
-      duration: 800,
+      bearing: userBearing, // Rotate map to face direction of travel
+      duration: 1000,
       easing: (t) => t * (2 - t), // Smooth easeOut
     });
-  }, [userPosition, followUser, loaded]);
+  }, [userPosition, userBearing, followUser, loaded]);
 
   // Update recording path
   useEffect(() => {

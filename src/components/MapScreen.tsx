@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ZonnaMap3D } from './ZonnaMap3D';
 import { MapStyleToggle } from './MapStyleToggle';
 import { Button } from './ui/button';
@@ -12,16 +12,67 @@ interface MapScreenProps {
   onSelectConquest: (conquest: Conquest | null) => void;
 }
 
+// Calculate bearing between two points (in degrees)
+function calculateBearing(from: [number, number], to: [number, number]): number {
+  const lat1 = from[0] * Math.PI / 180;
+  const lat2 = to[0] * Math.PI / 180;
+  const dLon = (to[1] - from[1]) * Math.PI / 180;
+
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  
+  let bearing = Math.atan2(y, x) * 180 / Math.PI;
+  return (bearing + 360) % 360;
+}
+
+// Calculate distance between two points (in meters)
+function calculateDistance(from: [number, number], to: [number, number]): number {
+  const R = 6371000; // Earth radius in meters
+  const lat1 = from[0] * Math.PI / 180;
+  const lat2 = to[0] * Math.PI / 180;
+  const dLat = (to[0] - from[0]) * Math.PI / 180;
+  const dLon = (to[1] - from[1]) * Math.PI / 180;
+
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1) * Math.cos(lat2) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 export function MapScreen({ conquests, selectedConquest, onSelectConquest }: MapScreenProps) {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
-  const [followUser, setFollowUser] = useState(true); // Always follow by default
+  const [userBearing, setUserBearing] = useState<number>(0);
+  const [followUser, setFollowUser] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
+  const lastPositionRef = useRef<[number, number] | null>(null);
 
-  // Watch user position continuously with maximum precision - always follow like Uber
+  // Watch user position continuously with maximum precision
   useEffect(() => {
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        setUserPosition([pos.coords.latitude, pos.coords.longitude]);
+        const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        
+        // Calculate bearing from movement if we have a previous position
+        if (lastPositionRef.current) {
+          const distance = calculateDistance(lastPositionRef.current, newPos);
+          
+          // Only update bearing if moved more than 3 meters (reduces jitter)
+          if (distance > 3) {
+            const newBearing = calculateBearing(lastPositionRef.current, newPos);
+            setUserBearing(newBearing);
+            lastPositionRef.current = newPos;
+          }
+        } else {
+          lastPositionRef.current = newPos;
+        }
+
+        // Use device heading if available (compass)
+        if (pos.coords.heading !== null && !isNaN(pos.coords.heading)) {
+          setUserBearing(pos.coords.heading);
+        }
+
+        setUserPosition(newPos);
       },
       () => {},
       { 
@@ -37,7 +88,7 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
   }, []);
 
   const handleLocate = () => {
-    setFollowUser(true); // Re-enable follow mode
+    setFollowUser(true);
   };
 
   return (
@@ -46,6 +97,7 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
         conquests={conquests}
         selectedConquest={selectedConquest}
         userPosition={userPosition}
+        userBearing={userBearing}
         followUser={followUser}
         mapStyle={mapStyle}
       />
