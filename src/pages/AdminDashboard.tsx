@@ -9,96 +9,189 @@ import {
   Calendar, 
   ArrowLeft, 
   Loader2,
-  Map,
-  Filter,
   Globe,
   Flame,
   MapPin,
   Crown,
-  Zap
+  Zap,
+  TrendingUp,
+  Activity,
+  Target,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
-import { useIsAdmin, useAdminProfiles, useAdminConquests, useAdminGroups } from '@/hooks/useAdmin';
+import { supabase } from '@/integrations/supabase/client';
 import { RANK_CONFIG } from '@/types';
-import { AdminGlobalMap } from '@/components/AdminGlobalMap';
-import { MapStyleToggle } from '@/components/MapStyleToggle';
-import type { MapStyleType } from '@/lib/mapStyle';
 
-type TabType = 'map' | 'users' | 'clans';
+type TabType = 'overview' | 'users' | 'clans';
+
+interface DashboardStats {
+  totalUsers: number;
+  totalConquests: number;
+  totalClans: number;
+  totalArea: number;
+  totalKm: number;
+  activeToday: number;
+}
+
+interface UserProfile {
+  id: string;
+  user_id: string;
+  name: string;
+  nickname: string | null;
+  unique_code: string;
+  avatar_url: string | null;
+  level: number;
+  xp: number;
+  total_area: number;
+  total_km: number;
+  rank: string;
+  current_streak: number;
+  created_at: string;
+}
+
+interface ClanData {
+  id: string;
+  name: string;
+  total_area: number;
+  is_elite: boolean;
+  city: string | null;
+  country: string | null;
+  monthly_km: number;
+  member_count: number;
+}
+
+const MASTER_EMAIL = 'eusoumauriciopaiva1@gmail.com';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
-  const { data: profiles, isLoading: profilesLoading } = useAdminProfiles();
-  const { data: conquests, isLoading: conquestsLoading } = useAdminConquests();
-  const { data: groups } = useAdminGroups();
   
-  const [activeTab, setActiveTab] = useState<TabType>('map');
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
-  const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [clans, setClans] = useState<ClanData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Security: Redirect non-authenticated users, but show proper UI states
+  // Check access and load data
   useEffect(() => {
-    // Only redirect after we've finished checking auth AND admin status
-    if (!authLoading && !adminLoading) {
-      if (!user) {
-        setIsRedirecting(true);
+    async function loadDashboard() {
+      // Wait for auth to finish loading
+      if (authLoading) return;
+      
+      // Check if user is master admin
+      if (!user || user.email !== MASTER_EMAIL) {
         navigate('/');
         return;
       }
-      // Allow only master admin
-      if (isAdmin === false || user?.email !== 'eusoumauriciopaiva1@gmail.com') {
-        setIsRedirecting(true);
-        navigate('/');
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Load stats
+        const [profilesRes, conquestsRes, groupsRes] = await Promise.all([
+          supabase.from('profiles').select('*'),
+          supabase.from('conquests').select('id, created_at'),
+          supabase.from('groups').select('*, group_members(user_id)')
+        ]);
+
+        if (profilesRes.error) throw profilesRes.error;
+        if (conquestsRes.error) throw conquestsRes.error;
+        if (groupsRes.error) throw groupsRes.error;
+
+        const profiles = profilesRes.data || [];
+        const conquests = conquestsRes.data || [];
+        const groups = groupsRes.data || [];
+
+        // Calculate today's active users
+        const today = new Date().toISOString().split('T')[0];
+        const activeToday = conquests.filter(c => 
+          c.created_at?.startsWith(today)
+        ).length;
+
+        setStats({
+          totalUsers: profiles.length,
+          totalConquests: conquests.length,
+          totalClans: groups.length,
+          totalArea: profiles.reduce((sum, p) => sum + (p.total_area || 0), 0),
+          totalKm: profiles.reduce((sum, p) => sum + Number(p.total_km || 0), 0),
+          activeToday
+        });
+
+        // Set users with ranking
+        setUsers(profiles.sort((a, b) => b.total_area - a.total_area).map(p => ({
+          id: p.id,
+          user_id: p.user_id,
+          name: p.name,
+          nickname: p.nickname,
+          unique_code: p.unique_code,
+          avatar_url: p.avatar_url,
+          level: p.level,
+          xp: p.xp,
+          total_area: p.total_area,
+          total_km: Number(p.total_km),
+          rank: p.rank,
+          current_streak: p.current_streak,
+          created_at: p.created_at
+        })));
+
+        // Set clans
+        setClans(groups.map(g => ({
+          id: g.id,
+          name: g.name,
+          total_area: g.total_area,
+          is_elite: g.is_elite,
+          city: g.city,
+          country: g.country,
+          monthly_km: Number(g.monthly_km),
+          member_count: g.group_members?.length || 0
+        })));
+
+      } catch (err: any) {
+        console.error('Dashboard error:', err);
+        setError(err.message || 'Erro ao carregar dados');
+      } finally {
+        setLoading(false);
       }
     }
-  }, [authLoading, user, adminLoading, isAdmin, navigate]);
 
-  // Get filtered user IDs based on selected group
-  const getFilteredUserIds = (): string[] | undefined => {
-    if (selectedGroupId === 'all' || !groups) return undefined;
-    
-    const group = groups.find(g => g.id === selectedGroupId);
-    if (!group) return undefined;
-    
-    return group.group_members?.map((m: any) => m.user_id) || [];
-  };
+    loadDashboard();
+  }, [user, authLoading, navigate]);
 
-  // Show loading state with proper visual feedback
-  if (authLoading || adminLoading || isRedirecting) {
+  // Loading state
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
-          <div className="relative w-16 h-16 mx-auto mb-6">
+          <div className="relative w-20 h-20 mx-auto mb-6">
             <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <Shield className="absolute inset-0 m-auto w-6 h-6 text-primary" />
+            <Shield className="absolute inset-0 m-auto w-8 h-8 text-primary" />
           </div>
-          <p className="text-primary font-mono text-sm tracking-[0.3em] animate-pulse">
-            {isRedirecting ? 'REDIRECIONANDO' : 'VERIFICANDO ACESSO'}
+          <p className="text-primary font-mono text-lg tracking-[0.3em] animate-pulse">
+            COMANDO ZONNA
           </p>
           <p className="text-muted-foreground font-mono text-xs mt-2">
-            PAINEL DE CONTROLE ZONNA
+            Carregando painel de controle...
           </p>
         </div>
       </div>
     );
   }
 
-  // Show access denied message instead of blank page (fallback if redirect fails)
-  if (!user || !isAdmin || user?.email !== 'eusoumauriciopaiva1@gmail.com') {
+  // Access check
+  if (!user || user.email !== MASTER_EMAIL) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center p-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
-            <Shield className="w-8 h-8 text-destructive" />
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-destructive/20 flex items-center justify-center">
+            <Shield className="w-10 h-10 text-destructive" />
           </div>
-          <h1 className="text-xl font-black text-foreground mb-2 font-mono tracking-wider">
+          <h1 className="text-2xl font-black text-foreground mb-2 font-mono tracking-wider">
             ACESSO NEGADO
           </h1>
           <p className="text-muted-foreground font-mono text-sm mb-6">
@@ -113,166 +206,211 @@ export default function AdminDashboard() {
     );
   }
 
-  const totalArea = profiles?.reduce((sum, p) => sum + p.total_area, 0) || 0;
-  const totalKm = profiles?.reduce((sum, p) => sum + Number(p.total_km), 0) || 0;
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-destructive/20 flex items-center justify-center">
+            <Activity className="w-10 h-10 text-destructive" />
+          </div>
+          <h1 className="text-xl font-black text-foreground mb-2 font-mono">
+            ERRO AO CARREGAR
+          </h1>
+          <p className="text-muted-foreground font-mono text-sm mb-6">
+            {error}
+          </p>
+          <Button onClick={() => window.location.reload()} className="font-mono bg-primary text-black">
+            Tentar Novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-xl border-b border-primary/20 p-4">
+      <header className="sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-primary/30 px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="text-muted-foreground hover:text-foreground">
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="flex items-center gap-2">
-              <Shield className="w-6 h-6 text-primary" />
-              <h1 className="text-xl font-black tracking-tighter font-mono">
-                COMANDO <span className="text-primary">ZONNA</span>
-              </h1>
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                <Shield className="w-5 h-5 text-black" />
+              </div>
+              <div>
+                <h1 className="text-lg font-black tracking-tight font-mono text-foreground">
+                  COMANDO ZONNA
+                </h1>
+                <p className="text-[10px] text-primary font-mono">PAINEL DE CONTROLE MASTER</p>
+              </div>
             </div>
           </div>
           
-          {/* Tab switcher */}
-          <div className="flex gap-2">
-            <Button
-              variant={activeTab === 'map' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('map')}
-              className="gap-2 font-mono"
-            >
-              <Globe className="w-4 h-4" />
-              MAPA
-            </Button>
-            <Button
-              variant={activeTab === 'users' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('users')}
-              className="gap-2 font-mono"
-            >
-              <Users className="w-4 h-4" />
-              ATLETAS
-            </Button>
-            <Button
-              variant={activeTab === 'clans' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('clans')}
-              className="gap-2 font-mono"
-            >
-              <Crown className="w-4 h-4" />
-              CLÃS
-            </Button>
+          {/* User badge */}
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/30">
+            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-xs font-bold text-black">Z</span>
+            </div>
+            <span className="text-xs font-mono text-primary font-bold">ZADM</span>
           </div>
         </div>
       </header>
 
-      <main className="p-4 pb-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          <div className="bg-card rounded-xl p-3 border border-primary/20">
-            <Users className="w-5 h-5 text-primary mb-1" />
-            <p className="text-xl font-black font-mono">{profiles?.length || 0}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-              ATLETAS
-            </p>
-          </div>
-          <div className="bg-card rounded-xl p-3 border border-primary/20">
-            <MapPin className="w-5 h-5 text-primary mb-1" />
-            <p className="text-xl font-black font-mono">{conquests?.length || 0}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-              CONQUISTAS
-            </p>
-          </div>
-          <div className="bg-card rounded-xl p-3 border border-primary/20">
-            <Trophy className="w-5 h-5 text-primary mb-1" />
-            <p className="text-xl font-black font-mono">
-              {(totalArea / 1000).toFixed(0)}k
-            </p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-              M² TOTAL
-            </p>
-          </div>
-          <div className="bg-card rounded-xl p-3 border border-primary/20">
-            <Flame className="w-5 h-5 text-primary mb-1" />
-            <p className="text-xl font-black font-mono">{totalKm.toFixed(0)}</p>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-              KM TOTAL
-            </p>
-          </div>
+      {/* Tab Navigation */}
+      <nav className="px-4 py-3 border-b border-border/50 bg-[#0a0a0a]">
+        <div className="flex gap-2">
+          {[
+            { id: 'overview', label: 'VISÃO GERAL', icon: TrendingUp },
+            { id: 'users', label: 'ATLETAS', icon: Users },
+            { id: 'clans', label: 'CLÃS', icon: Crown },
+          ].map((tab) => (
+            <Button
+              key={tab.id}
+              variant={activeTab === tab.id ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveTab(tab.id as TabType)}
+              className={`gap-2 font-mono text-xs ${
+                activeTab === tab.id 
+                  ? 'bg-primary text-black' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </Button>
+          ))}
         </div>
+      </nav>
 
+      <main className="p-4 pb-8">
         <AnimatePresence mode="wait">
-          {activeTab === 'map' && (
+          {/* OVERVIEW TAB */}
+          {activeTab === 'overview' && (
             <motion.div
-              key="map"
+              key="overview"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               className="space-y-4"
             >
-              {/* Map Controls */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-muted-foreground" />
-                  <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                    <SelectTrigger className="w-[200px] bg-card border-primary/20 font-mono text-sm">
-                      <SelectValue placeholder="Filtrar por Clã" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os Clãs</SelectItem>
-                      {groups?.map((group) => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name} {group.is_elite && '⚡'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gradient-to-br from-primary/20 to-primary/5 rounded-2xl p-4 border border-primary/30">
+                  <Users className="w-6 h-6 text-primary mb-2" />
+                  <p className="text-3xl font-black font-mono text-foreground">{stats?.totalUsers || 0}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mt-1">
+                    ATLETAS CADASTRADOS
+                  </p>
                 </div>
                 
-                <MapStyleToggle currentStyle={mapStyle} onStyleChange={setMapStyle} />
-              </div>
-
-              {/* Global Map */}
-              <div className="h-[60vh] bg-card rounded-xl border border-primary/20 overflow-hidden relative">
-                {conquestsLoading ? (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-2" />
-                      <p className="text-muted-foreground font-mono text-sm">
-                        CARREGANDO HEATMAP GLOBAL...
-                      </p>
-                    </div>
-                  </div>
-                ) : conquests?.length === 0 ? (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <Globe className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-muted-foreground font-mono text-sm">
-                        NENHUM TERRITÓRIO CONQUISTADO
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Os rastros aparecerão quando atletas começarem a correr
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <AdminGlobalMap 
-                    conquests={conquests || []} 
-                    filterUserIds={getFilteredUserIds()}
-                    mapStyle={mapStyle}
-                  />
-                )}
+                <div className="bg-gradient-to-br from-green-500/20 to-green-500/5 rounded-2xl p-4 border border-green-500/30">
+                  <Activity className="w-6 h-6 text-green-400 mb-2" />
+                  <p className="text-3xl font-black font-mono text-foreground">{stats?.activeToday || 0}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mt-1">
+                    ATIVOS HOJE
+                  </p>
+                </div>
                 
-                {/* Map overlay info */}
-                <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-primary/30">
-                  <p className="text-xs font-mono text-primary">
-                    {conquests?.length || 0} TERRITÓRIOS MAPEADOS
+                <div className="bg-gradient-to-br from-blue-500/20 to-blue-500/5 rounded-2xl p-4 border border-blue-500/30">
+                  <Target className="w-6 h-6 text-blue-400 mb-2" />
+                  <p className="text-3xl font-black font-mono text-foreground">{stats?.totalConquests || 0}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mt-1">
+                    CONQUISTAS TOTAIS
+                  </p>
+                </div>
+                
+                <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 rounded-2xl p-4 border border-yellow-500/30">
+                  <Crown className="w-6 h-6 text-yellow-400 mb-2" />
+                  <p className="text-3xl font-black font-mono text-foreground">{stats?.totalClans || 0}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-mono mt-1">
+                    CLÃS CRIADOS
                   </p>
                 </div>
               </div>
+
+              {/* Big Numbers */}
+              <div className="bg-card rounded-2xl p-5 border border-border">
+                <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">
+                  MÉTRICAS GLOBAIS
+                </h3>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-4xl font-black font-mono text-primary">
+                      {((stats?.totalArea || 0) / 1000).toFixed(1)}k
+                    </p>
+                    <p className="text-sm text-muted-foreground font-mono">m² dominados</p>
+                  </div>
+                  <div>
+                    <p className="text-4xl font-black font-mono text-primary">
+                      {(stats?.totalKm || 0).toFixed(1)}
+                    </p>
+                    <p className="text-sm text-muted-foreground font-mono">km percorridos</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-card rounded-2xl p-4 border border-border">
+                <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-3">
+                  AÇÕES RÁPIDAS
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" className="h-auto py-3 flex-col gap-2 font-mono border-primary/30 hover:bg-primary/10">
+                    <Share2 className="w-5 h-5 text-primary" />
+                    <span className="text-xs">GERAR RELATÓRIO</span>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-3 flex-col gap-2 font-mono border-primary/30 hover:bg-primary/10">
+                    <Globe className="w-5 h-5 text-primary" />
+                    <span className="text-xs">VER NO MAPA</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Top Athletes Preview */}
+              {users.length > 0 && (
+                <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                  <div className="p-4 border-b border-border flex items-center justify-between">
+                    <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                      TOP ATLETAS
+                    </h3>
+                    <Button variant="ghost" size="sm" onClick={() => setActiveTab('users')} className="text-primary text-xs">
+                      Ver todos →
+                    </Button>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {users.slice(0, 3).map((user, index) => (
+                      <div key={user.id} className="p-4 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
+                          {index + 1}
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-black font-bold shrink-0">
+                          {user.avatar_url ? (
+                            <img src={user.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" />
+                          ) : (
+                            user.name.charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-sm truncate">{user.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">#{user.unique_code}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-primary font-mono">{user.total_area.toLocaleString()} m²</p>
+                          <p className="text-xs text-muted-foreground">{user.total_km.toFixed(1)} km</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
+          {/* USERS TAB */}
           {activeTab === 'users' && (
             <motion.div
               key="users"
@@ -280,89 +418,68 @@ export default function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              {/* Users Table */}
-              <div className="bg-card rounded-xl border border-primary/20 overflow-hidden">
-                <div className="p-4 border-b border-primary/20">
-                  <h2 className="font-bold flex items-center gap-2 font-mono">
+              <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-bold flex items-center gap-2 font-mono text-sm">
                     <Users className="w-4 h-4 text-primary" />
-                    ATLETAS CADASTRADOS
+                    ATLETAS CADASTRADOS ({users.length})
                   </h2>
                 </div>
 
-                {profilesLoading ? (
-                  <div className="p-8 text-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm font-mono">
-                      CARREGANDO ATLETAS...
-                    </p>
-                  </div>
-                ) : profiles?.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm font-mono">
-                      NENHUM ATLETA CADASTRADO
+                {users.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <Users className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground font-mono">
+                      Nenhum atleta cadastrado ainda
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-primary/10">
-                    {profiles?.map((profile) => (
-                      <div 
-                        key={profile.id} 
-                        className="p-4 hover:bg-primary/5 transition-colors"
-                      >
-                        <div className="flex items-start gap-4">
-                          {/* Avatar */}
+                  <div className="divide-y divide-border/50">
+                    {users.map((profile, index) => (
+                      <div key={profile.id} className="p-4 hover:bg-primary/5 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                            #{index + 1}
+                          </div>
+                          
                           <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center text-black font-bold shrink-0">
                             {profile.avatar_url ? (
-                              <img 
-                                src={profile.avatar_url} 
-                                alt={profile.name}
-                                className="w-full h-full rounded-xl object-cover"
-                              />
+                              <img src={profile.avatar_url} alt="" className="w-full h-full rounded-xl object-cover" />
                             ) : (
                               profile.name.charAt(0).toUpperCase()
                             )}
                           </div>
 
-                          {/* Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold font-mono">{profile.name}</span>
+                              <span className="font-bold">{profile.name}</span>
                               {profile.nickname && (
-                                <span className="text-xs text-primary font-mono">
-                                  @{profile.nickname}
-                                </span>
+                                <span className="text-xs text-primary font-mono">@{profile.nickname}</span>
                               )}
-                              <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-mono">
+                              <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-mono">
                                 {RANK_CONFIG[profile.rank as keyof typeof RANK_CONFIG]?.label || profile.rank}
                               </span>
                             </div>
-
-                            {/* Email */}
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                              <Mail className="w-3 h-3" />
-                              <span className="truncate font-mono text-xs">{profile.email}</span>
-                            </div>
-
-                            {/* Code and Stats */}
-                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap font-mono">
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground font-mono">
                               <span className="flex items-center gap-1">
                                 <Hash className="w-3 h-3" />
                                 {profile.unique_code}
                               </span>
                               <span>LVL {profile.level}</span>
-                              <span>{profile.xp} XP</span>
-                              <span className="text-primary font-bold">
-                                {profile.total_area.toLocaleString()} m²
+                              <span className="flex items-center gap-1">
+                                <Flame className="w-3 h-3 text-orange-400" />
+                                {profile.current_streak}
                               </span>
-                              <span>{Number(profile.total_km).toFixed(1)} km</span>
                             </div>
+                          </div>
 
-                            {/* Date */}
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 font-mono">
-                              <Calendar className="w-3 h-3" />
-                              {new Date(profile.created_at).toLocaleDateString('pt-BR')}
-                            </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-primary font-mono">
+                              {profile.total_area.toLocaleString()} m²
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {profile.total_km.toFixed(1)} km
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -373,6 +490,7 @@ export default function AdminDashboard() {
             </motion.div>
           )}
 
+          {/* CLANS TAB */}
           {activeTab === 'clans' && (
             <motion.div
               key="clans"
@@ -380,97 +498,72 @@ export default function AdminDashboard() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
             >
-              {/* Clans Management */}
-              <div className="bg-card rounded-xl border border-primary/20 overflow-hidden">
-                <div className="p-4 border-b border-primary/20">
-                  <h2 className="font-bold flex items-center gap-2 font-mono">
+              <div className="bg-card rounded-2xl border border-border overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <h2 className="font-bold flex items-center gap-2 font-mono text-sm">
                     <Crown className="w-4 h-4 text-primary" />
-                    CLÃS REGISTRADOS ({groups?.length || 0})
+                    CLÃS REGISTRADOS ({clans.length})
                   </h2>
                 </div>
 
-                {!groups || groups.length === 0 ? (
-                  <div className="p-8 text-center">
-                    <Crown className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm font-mono">
-                      NENHUM CLÃ CRIADO
+                {clans.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <Crown className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground font-mono">
+                      Nenhum clã criado ainda
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-primary/10">
-                    {groups.map((group) => {
-                      // Find leader profile
-                      const leaderProfile = profiles?.find(p => p.user_id === group.created_by);
-                      
-                      return (
-                        <div 
-                          key={group.id} 
-                          className="p-4 hover:bg-primary/5 transition-colors"
-                        >
-                          <div className="flex items-start gap-4">
-                            {/* Clan Icon */}
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-                              group.is_elite 
-                                ? 'bg-gradient-to-br from-yellow-500 to-amber-600' 
-                                : 'bg-primary/20'
-                            }`}>
-                              {group.is_elite ? (
-                                <Zap className="w-6 h-6 text-black" />
-                              ) : (
-                                <Crown className="w-5 h-5 text-primary" />
+                  <div className="divide-y divide-border/50">
+                    {clans.map((clan) => (
+                      <div key={clan.id} className="p-4 hover:bg-primary/5 transition-colors">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                            clan.is_elite 
+                              ? 'bg-gradient-to-br from-yellow-500 to-amber-600' 
+                              : 'bg-primary/20'
+                          }`}>
+                            {clan.is_elite ? (
+                              <Zap className="w-6 h-6 text-black" />
+                            ) : (
+                              <Crown className="w-5 h-5 text-primary" />
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">{clan.name}</span>
+                              {clan.is_elite && (
+                                <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-mono font-bold">
+                                  ELITE
+                                </span>
                               )}
                             </div>
-
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold font-mono">{group.name}</span>
-                                {group.is_elite && (
-                                  <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-mono font-bold">
-                                    CLÃ DE ELITE
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Location */}
-                              {(group.city || group.country) && (
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                  <MapPin className="w-3 h-3" />
-                                  <span className="font-mono text-xs">
-                                    {group.city && group.city}
-                                    {group.city && group.country && ', '}
-                                    {group.country}
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Leader */}
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 font-mono">
-                                <Shield className="w-3 h-3 text-primary" />
-                                <span className="text-primary">Líder:</span>
-                                <span>
-                                  {leaderProfile?.nickname 
-                                    ? `@${leaderProfile.nickname}` 
-                                    : leaderProfile?.name || 'Desconhecido'}
-                                </span>
-                              </div>
-
-                              {/* Stats */}
-                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap font-mono">
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground font-mono">
+                              {clan.city && (
                                 <span className="flex items-center gap-1">
-                                  <Users className="w-3 h-3" />
-                                  {group.group_members?.length || 0} membros
+                                  <MapPin className="w-3 h-3" />
+                                  {clan.city}
                                 </span>
-                                <span className="text-primary font-bold">
-                                  {group.total_area.toLocaleString()} m²
-                                </span>
-                                <span>{Number(group.monthly_km).toFixed(1)} km/mês</span>
-                              </div>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {clan.member_count} membros
+                              </span>
                             </div>
                           </div>
+
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-primary font-mono">
+                              {clan.total_area.toLocaleString()} m²
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {clan.monthly_km.toFixed(1)} km/mês
+                            </p>
+                          </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
