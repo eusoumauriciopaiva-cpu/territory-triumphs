@@ -208,6 +208,48 @@ export type Database = {
         }
         Relationships: []
       }
+      territory_conflicts: {
+        Row: {
+          area_invaded: number
+          conquest_id: string
+          created_at: string
+          id: string
+          invader_id: string
+          is_read_by_admin: boolean
+          is_read_by_victim: boolean
+          latitude: number | null
+          location_name: string | null
+          longitude: number | null
+          victim_id: string
+        }
+        Insert: {
+          area_invaded?: number
+          conquest_id: string
+          created_at?: string
+          id?: string
+          invader_id: string
+          is_read_by_admin?: boolean
+          is_read_by_victim?: boolean
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          victim_id: string
+        }
+        Update: {
+          area_invaded?: number
+          conquest_id?: string
+          created_at?: string
+          id?: string
+          invader_id?: string
+          is_read_by_admin?: boolean
+          is_read_by_victim?: boolean
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          victim_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -239,6 +281,26 @@ export type Database = {
         Returns: Database["public"]["Enums"]["app_rank"]
       }
       generate_unique_code: { Args: never; Returns: string }
+      get_all_conflicts_admin: {
+        Args: never
+        Returns: {
+          area_invaded: number
+          conquest_id: string
+          created_at: string
+          id: string
+          invader_id: string
+          invader_name: string
+          invader_nickname: string
+          is_read_by_admin: boolean
+          is_read_by_victim: boolean
+          latitude: number
+          location_name: string
+          longitude: number
+          victim_id: string
+          victim_name: string
+          victim_nickname: string
+        }[]
+      }
       get_all_conquests_admin: {
         Args: never
         Returns: {

@@ -20,7 +20,10 @@ import { VisitableProfile } from '@/components/VisitableProfile';
 import { ClanSystem } from '@/components/ClanSystem';
 import { ClanProfile } from '@/components/ClanProfile';
 import { SyncOverlay } from '@/components/SyncOverlay';
+import { NotificationBell } from '@/components/NotificationBell';
+import { TrackingNotificationBar } from '@/components/TrackingNotificationBar';
 import { useToast } from '@/hooks/use-toast';
+import { useUnreadConflictCount } from '@/hooks/useConflicts';
 import type { Conquest, RecordMode, Profile, Group } from '@/types';
 
 function AppContent() {
@@ -209,6 +212,11 @@ function AppContent() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
+      {/* Notification Bell Header */}
+      <div className="fixed top-0 right-0 z-40 safe-top pr-4 pt-4">
+        <NotificationBell />
+      </div>
+
       {/* Sync Overlay */}
       <SyncOverlay
         isVisible={syncOverlay.visible}
