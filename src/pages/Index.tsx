@@ -4,10 +4,12 @@ import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { useProfile, usePublicProfile } from '@/hooks/useProfile';
 import { useConquests } from '@/hooks/useConquests';
 import { useGroups } from '@/hooks/useGroups';
+import { useClanConquests } from '@/hooks/useClanConquests';
+import { useProfiles } from '@/hooks/useProfiles';
+import { useChallenges } from '@/hooks/useChallenges';
 import { BottomNav } from '@/components/BottomNav';
 import { FeedScreen } from '@/components/FeedScreen';
 import { MapScreen } from '@/components/MapScreen';
-import { GroupsScreen } from '@/components/GroupsScreen';
 import { ProfileScreen } from '@/components/ProfileScreen';
 import { RecordingDashboard } from '@/components/RecordingDashboard';
 import { AuthScreen } from '@/components/AuthScreen';
@@ -15,19 +17,36 @@ import { SplashScreen } from '@/components/SplashScreen';
 import { MapScanner } from '@/components/MapScanner';
 import { InvasionAlert, DuelPanel, checkInvasion } from '@/components/InvasionSystem';
 import { VisitableProfile } from '@/components/VisitableProfile';
-import type { Conquest, RecordMode, Profile } from '@/types';
+import { ClanSystem } from '@/components/ClanSystem';
+import { ClanProfile } from '@/components/ClanProfile';
+import { SyncOverlay } from '@/components/SyncOverlay';
+import { useToast } from '@/hooks/use-toast';
+import type { Conquest, RecordMode, Profile, Group } from '@/types';
 
 function AppContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { profile, updateProfile } = useProfile();
   const { conquests, myConquests, addConquest, isLoading: conquestsLoading } = useConquests();
   const { groups, myMemberships, createGroup, joinGroup, leaveGroup } = useGroups();
+  const { data: clanConquests = [] } = useClanConquests();
+  const { data: allProfiles = [] } = useProfiles();
+  const { createChallenge, pendingChallenges } = useChallenges();
+  const { toast } = useToast();
 
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('feed');
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [selectedConquest, setSelectedConquest] = useState<Conquest | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+
+  // Sync overlay for clan join
+  const [syncOverlay, setSyncOverlay] = useState<{ visible: boolean; clanName: string }>({
+    visible: false,
+    clanName: '',
+  });
+
+  // Clan profile modal
+  const [viewingClan, setViewingClan] = useState<Group | null>(null);
 
   // Invasion detection state
   const [invasionAlert, setInvasionAlert] = useState<{
@@ -47,6 +66,16 @@ function AppContent() {
   // Fetch opponent profile for invasion/duel
   const { data: invasionOwnerProfile } = usePublicProfile(invasionAlert.conquest?.user_id || null);
 
+  // Show pending challenges notification
+  useEffect(() => {
+    if (pendingChallenges.length > 0) {
+      toast({
+        title: '⚔️ Novo Desafio!',
+        description: `${pendingChallenges[0].challenger_profile?.name || 'Alguém'} te desafiou!`,
+      });
+    }
+  }, [pendingChallenges.length]);
+
   // Show splash screen only on first load
   useEffect(() => {
     const hasSeenSplash = sessionStorage.getItem('zonna_splash_seen');
@@ -60,7 +89,6 @@ function AppContent() {
     if (user && conquestsLoading) {
       setIsScanning(true);
     } else {
-      // Keep scanning for a bit after load completes
       const timer = setTimeout(() => setIsScanning(false), 1500);
       return () => clearTimeout(timer);
     }
@@ -97,12 +125,12 @@ function AppContent() {
   const handlePositionUpdate = useCallback((position: [number, number]) => {
     if (!user || !profile) return;
     
-    // Check for invasion
-    const invaded = checkInvasion(position, conquests, user.id, []);
+    // Check for invasion - only against clan members' conquests (Fog of War)
+    const invaded = checkInvasion(position, clanConquests, user.id, []);
     if (invaded && invaded.user_id !== invasionAlert.conquest?.user_id) {
       setInvasionAlert({ visible: true, conquest: invaded });
     }
-  }, [user, profile, conquests, invasionAlert.conquest?.user_id]);
+  }, [user, profile, clanConquests, invasionAlert.conquest?.user_id]);
 
   const handleDismissInvasion = () => {
     setInvasionAlert({ visible: false, conquest: null });
@@ -119,14 +147,44 @@ function AppContent() {
     setDuelMode({ active: false, opponent: null });
   };
 
-  const handleVisitProfile = (profileToVisit: Profile) => {
-    setVisitingProfile(profileToVisit);
+  const handleVisitProfile = (userId: string) => {
+    const foundProfile = allProfiles.find(p => p.user_id === userId);
+    if (foundProfile) {
+      setVisitingProfile(foundProfile);
+    }
   };
 
-  const handleChallengeFromProfile = () => {
+  const handleChallengeFromProfile = async () => {
     if (visitingProfile) {
-      setDuelMode({ active: true, opponent: visitingProfile });
+      try {
+        await createChallenge.mutateAsync(visitingProfile.user_id);
+        toast({
+          title: '⚔️ Desafio Enviado!',
+          description: `Você desafiou ${visitingProfile.name}!`,
+        });
+      } catch (error) {
+        console.error('Failed to create challenge:', error);
+      }
       setVisitingProfile(null);
+    }
+  };
+
+  const handleJoinGroup = async (groupId: string) => {
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      setSyncOverlay({ visible: true, clanName: group.name });
+    }
+    await joinGroup.mutateAsync(groupId);
+  };
+
+  const handleSyncComplete = () => {
+    setSyncOverlay({ visible: false, clanName: '' });
+  };
+
+  const handleViewClan = (groupId: string) => {
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      setViewingClan(group);
     }
   };
 
@@ -146,8 +204,18 @@ function AppContent() {
     return <AuthScreen />;
   }
 
+  // Use clan conquests for map (Fog of War - only see clan members' territories)
+  const visibleConquests = myMemberships.length > 0 ? clanConquests : myConquests;
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
+      {/* Sync Overlay */}
+      <SyncOverlay
+        isVisible={syncOverlay.visible}
+        clanName={syncOverlay.clanName}
+        onComplete={handleSyncComplete}
+      />
+
       {/* Map Scanner Animation */}
       <MapScanner isScanning={isScanning} />
 
@@ -182,6 +250,14 @@ function AppContent() {
         />
       )}
 
+      {/* Clan Profile Modal */}
+      <ClanProfile
+        group={viewingClan}
+        isOpen={!!viewingClan}
+        onClose={() => setViewingClan(null)}
+        onViewMember={handleVisitProfile}
+      />
+
       <main className="flex-1 overflow-hidden relative">
         <AnimatePresence mode="wait">
           <motion.div
@@ -193,22 +269,25 @@ function AppContent() {
             className="h-full w-full"
           >
             {activeTab === 'feed' && (
-              <FeedScreen conquests={conquests} />
+              <FeedScreen conquests={visibleConquests} />
             )}
             {activeTab === 'map' && (
               <MapScreen 
-                conquests={conquests}
+                conquests={visibleConquests}
                 selectedConquest={selectedConquest}
                 onSelectConquest={setSelectedConquest}
               />
             )}
             {activeTab === 'groups' && (
-              <GroupsScreen 
+              <ClanSystem 
                 groups={groups}
                 myMemberships={myMemberships}
+                profiles={allProfiles}
                 onCreateGroup={(name) => createGroup.mutate(name)}
-                onJoinGroup={(id) => joinGroup.mutate(id)}
+                onJoinGroup={handleJoinGroup}
                 onLeaveGroup={(id) => leaveGroup.mutate(id)}
+                onViewProfile={handleVisitProfile}
+                onViewClan={handleViewClan}
               />
             )}
             {activeTab === 'profile' && (

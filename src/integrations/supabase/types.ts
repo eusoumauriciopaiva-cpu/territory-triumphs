@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      challenges: {
+        Row: {
+          challenged_area: number
+          challenged_id: string
+          challenger_area: number
+          challenger_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          status: string
+          winner_id: string | null
+        }
+        Insert: {
+          challenged_area?: number
+          challenged_id: string
+          challenger_area?: number
+          challenger_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          winner_id?: string | null
+        }
+        Update: {
+          challenged_area?: number
+          challenged_id?: string
+          challenger_area?: number
+          challenger_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          winner_id?: string | null
+        }
+        Relationships: []
+      }
       conquests: {
         Row: {
           area: number
@@ -75,23 +111,35 @@ export type Database = {
       }
       groups: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
           created_by: string | null
           id: string
+          is_elite: boolean
+          monthly_km: number
           name: string
           total_area: number
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          is_elite?: boolean
+          monthly_km?: number
           name: string
           total_area?: number
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
+          is_elite?: boolean
+          monthly_km?: number
           name?: string
           total_area?: number
         }
