@@ -1,3 +1,8 @@
+import maplibregl from 'maplibre-gl';
+
+// Map style types
+export type MapStyleType = 'dark' | 'satellite';
+
 // ZONNA High-Contrast Dark Map Style (Strava-inspired)
 // Focused on natural areas visibility and clean training aesthetics
 
@@ -315,4 +320,23 @@ export function applyZonnaStyleOverrides(map: maplibregl.Map) {
       map.setLayoutProperty(layerId, 'visibility', 'none');
     }
   });
+}
+
+// Satellite style URL (using MapTiler satellite)
+export const SATELLITE_STYLE = 'https://api.maptiler.com/maps/hybrid/style.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL';
+
+// Get style URL by type
+export function getMapStyleUrl(styleType: MapStyleType): string {
+  switch (styleType) {
+    case 'satellite':
+      return SATELLITE_STYLE;
+    case 'dark':
+    default:
+      return CARTO_DARK_STYLE;
+  }
+}
+
+// Check if style needs ZONNA overrides
+export function needsZonnaOverrides(styleType: MapStyleType): boolean {
+  return styleType === 'dark';
 }

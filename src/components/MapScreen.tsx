@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { ZonnaMap3D } from './ZonnaMap3D';
+import { MapStyleToggle } from './MapStyleToggle';
 import { Button } from './ui/button';
 import { Layers, Focus } from 'lucide-react';
 import type { Conquest } from '@/types';
+import type { MapStyleType } from '@/lib/mapStyle';
 
 interface MapScreenProps {
   conquests: Conquest[];
@@ -13,6 +15,7 @@ interface MapScreenProps {
 export function MapScreen({ conquests, selectedConquest, onSelectConquest }: MapScreenProps) {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [followUser, setFollowUser] = useState(false);
+  const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
 
   const handleLocate = () => {
     navigator.geolocation.getCurrentPosition(
@@ -33,10 +36,17 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
         selectedConquest={selectedConquest}
         userPosition={userPosition}
         followUser={followUser}
+        mapStyle={mapStyle}
       />
 
       {/* Controls */}
       <div className="absolute bottom-24 right-4 flex flex-col gap-2">
+        {/* Map Style Toggle */}
+        <MapStyleToggle
+          currentStyle={mapStyle}
+          onStyleChange={setMapStyle}
+        />
+
         <Button
           variant="secondary"
           size="icon"
