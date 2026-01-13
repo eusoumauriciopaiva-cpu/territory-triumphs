@@ -9,12 +9,12 @@ import { RANK_CONFIG } from '@/types';
 interface VisitableProfileProps {
   isOpen: boolean;
   onClose: () => void;
-  profile: Profile;
+  profile: Profile | null;
   onChallenge: () => void;
 }
 
 export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: VisitableProfileProps) {
-  if (!isOpen) return null;
+  if (!isOpen || !profile) return null;
 
   return (
     <AnimatePresence>
@@ -42,9 +42,9 @@ export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: Visi
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center gap-4">
-                {/* Avatar */}
+                {/* Avatar with orange fallback */}
                 <div className="relative">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-zonna flex items-center justify-center text-3xl font-black text-primary-foreground">
+                  <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center text-3xl font-black text-black overflow-hidden">
                     {profile.avatar_url ? (
                       <img 
                         src={profile.avatar_url} 
@@ -62,7 +62,13 @@ export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: Visi
 
                 <div>
                   <h2 className="text-xl font-black text-foreground">{profile.name}</h2>
-                  <p className="text-sm text-muted-foreground">
+                  {profile.nickname && (
+                    <p className="text-sm text-primary font-medium">@{profile.nickname}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground font-mono">
+                    #{profile.unique_code}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
                     Nível {profile.level} • {RANK_CONFIG[profile.rank].label}
                   </p>
                   <StreakBadge streak={profile.current_streak} size="sm" />
@@ -83,9 +89,9 @@ export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: Visi
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-muted/50 rounded-2xl p-4 text-center">
                 <MapPin className="w-5 h-5 mx-auto mb-2 text-primary" />
-                <p className="text-xl font-mono-display font-bold text-foreground">
-                  {profile.total_km.toFixed(1)}
-                </p>
+              <p className="text-xl font-mono-display font-bold text-foreground">
+                {Number(profile.total_km).toFixed(1)}
+              </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">KM</p>
               </div>
 

@@ -16,7 +16,15 @@ export function useProfiles() {
 
       if (error) throw error;
 
-      return (data || []) as Profile[];
+      // Map with defaults for new fields
+      return (data || []).map(profile => ({
+        ...profile,
+        nickname: profile.nickname ?? null,
+        unique_code: profile.unique_code ?? '',
+        current_streak: profile.current_streak ?? 0,
+        best_streak: profile.best_streak ?? 0,
+        last_activity_date: profile.last_activity_date ?? null,
+      })) as Profile[];
     },
     staleTime: 60000,
   });
