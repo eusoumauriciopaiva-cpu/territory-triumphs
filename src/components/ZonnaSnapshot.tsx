@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Share2, Download, X, Flame } from 'lucide-react';
+import { Share2, Download, X, Trophy, Flame } from 'lucide-react';
 import { Button } from './ui/button';
 import { ZonnaMap3D } from './ZonnaMap3D';
 import html2canvas from 'html2canvas';
@@ -39,23 +39,17 @@ export function ZonnaSnapshot({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatPace = (pace: number) => {
-    const mins = Math.floor(pace);
-    const secs = Math.round((pace - mins) * 60);
-    return `${mins}'${secs.toString().padStart(2, '0')}"`;
-  };
-
   const generateStoryImage = async () => {
     if (!cardRef.current) return;
 
     setIsGenerating(true);
     try {
       // Wait for map to render
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#000000',
-        scale: 3, // High resolution
+        scale: 2,
         useCORS: true,
         allowTaint: true,
         width: 1080,
@@ -78,7 +72,6 @@ export function ZonnaSnapshot({
     }
 
     try {
-      // Convert data URL to blob
       const response = await fetch(generatedImage);
       const blob = await response.blob();
       const file = new File([blob], `zonna-territorio-${conquestNumber}.png`, { type: 'image/png' });
@@ -90,7 +83,6 @@ export function ZonnaSnapshot({
           text: `Conquistei ${stats.area.toLocaleString()}m² com a ZONNA! 🔥`,
         });
       } else {
-        // Fallback: download the image
         const link = document.createElement('a');
         link.download = `zonna-territorio-${conquestNumber}.png`;
         link.href = generatedImage;
@@ -128,7 +120,7 @@ export function ZonnaSnapshot({
       {/* Header */}
       <div className="flex items-center justify-between p-4 safe-top">
         <h2 className="text-lg font-black uppercase tracking-wider text-foreground">
-          ZONNA Snapshot
+          Compartilhar Story
         </h2>
         <Button
           variant="ghost"
@@ -148,127 +140,195 @@ export function ZonnaSnapshot({
             animate={{ scale: 1, opacity: 1 }}
             src={generatedImage}
             alt="Story Preview"
-            className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
+            className="max-h-full max-w-full object-contain rounded-2xl shadow-2xl border border-primary/30"
             style={{ maxHeight: 'calc(100vh - 200px)' }}
           />
         ) : (
-          <div className="flex items-center justify-center">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-muted-foreground text-sm font-medium">Gerando preview...</p>
           </div>
         )}
       </div>
 
-      {/* Hidden Story Card for Capture */}
+      {/* Hidden Story Card for Capture - Full Screen with Floating Card */}
       <div 
         className="fixed -left-[9999px] -top-[9999px]"
         style={{ width: 1080, height: 1920 }}
       >
         <div
           ref={cardRef}
-          className="w-full h-full bg-black flex flex-col"
+          className="relative w-full h-full overflow-hidden"
           style={{ width: 1080, height: 1920 }}
         >
-          {/* Top Branding */}
-          <div className="p-12 flex flex-col items-center">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF4F00] to-[#FF8C00] flex items-center justify-center">
-                <Flame className="w-10 h-10 text-white" />
-              </div>
-              <span 
-                className="text-6xl font-black tracking-tighter text-white"
-                style={{ fontFamily: 'Inter, sans-serif' }}
-              >
-                ZONNA
-              </span>
-            </div>
-            <p className="text-xl text-gray-400 font-medium tracking-widest uppercase">
-              Domine o chão que você pisa
-            </p>
+          {/* Background Map - Full Bleed */}
+          <div className="absolute inset-0">
+            <ZonnaMap3D
+              userPosition={path.length > 0 ? path[Math.floor(path.length / 2)] : null}
+              recordingPath={path}
+              followUser={false}
+            />
+            {/* Dark overlay for contrast */}
+            <div className="absolute inset-0 bg-black/40" />
           </div>
 
-          {/* Territory Number */}
-          <div className="px-12 mb-8">
-            <p className="text-[#FF4F00] text-3xl font-black tracking-widest uppercase">
-              TERRITÓRIO #{conquestNumber}
-            </p>
-            <p className="text-white text-5xl font-black tracking-tight mt-2">
-              CONQUISTADO
-            </p>
-          </div>
-
-          {/* Map Area */}
-          <div className="flex-1 mx-8 rounded-3xl overflow-hidden border-2 border-[#FF4F00]/30 relative">
-            <div className="absolute inset-0">
-              <ZonnaMap3D
-                userPosition={path.length > 0 ? path[0] : null}
-                recordingPath={path}
-                followUser={false}
-              />
-            </div>
-            {/* Gradient overlay at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black to-transparent" />
-          </div>
-
-          {/* Stats Bar */}
-          <div className="p-12">
-            <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222]">
-              <div className="grid grid-cols-3 gap-8">
-                {/* Pace */}
-                <div className="text-center">
-                  <p className="text-gray-500 text-lg font-bold uppercase tracking-widest mb-2">
-                    PACE
-                  </p>
+          {/* Floating Card - Centered */}
+          <div className="absolute inset-0 flex items-center justify-center p-12">
+            <div 
+              className="w-full rounded-[48px] overflow-hidden"
+              style={{ 
+                backgroundColor: 'rgba(0, 0, 0, 0.92)',
+                border: '3px solid #FF4F00',
+                boxShadow: '0 0 60px rgba(255, 79, 0, 0.3)'
+              }}
+            >
+              {/* Card Content */}
+              <div className="p-12 flex flex-col items-center">
+                
+                {/* Logo ZONNA */}
+                <div className="flex flex-col items-center mb-10">
+                  <div className="flex items-center gap-5 mb-3">
+                    <div 
+                      className="w-20 h-20 rounded-2xl flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #FF4F00 0%, #FF8C00 100%)' }}
+                    >
+                      <Flame className="w-12 h-12 text-white" />
+                    </div>
+                    <span 
+                      className="text-7xl font-black tracking-tighter text-white"
+                      style={{ fontFamily: 'Inter, sans-serif' }}
+                    >
+                      ZONNA
+                    </span>
+                  </div>
                   <p 
-                    className="text-5xl font-bold text-white"
-                    style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                    className="text-2xl font-semibold tracking-[0.3em] uppercase"
+                    style={{ color: '#666666' }}
                   >
-                    {formatPace(stats.pace)}
-                  </p>
-                  <p className="text-gray-500 text-sm mt-1">/km</p>
-                </div>
-
-                {/* Time */}
-                <div className="text-center">
-                  <p className="text-gray-500 text-lg font-bold uppercase tracking-widest mb-2">
-                    TEMPO
-                  </p>
-                  <p 
-                    className="text-5xl font-bold text-white"
-                    style={{ fontFamily: 'JetBrains Mono, monospace' }}
-                  >
-                    {formatTime(stats.duration)}
+                    Domine seu Território
                   </p>
                 </div>
 
-                {/* Distance */}
-                <div className="text-center">
-                  <p className="text-gray-500 text-lg font-bold uppercase tracking-widest mb-2">
-                    DISTÂNCIA
-                  </p>
-                  <p 
-                    className="text-5xl font-bold text-[#FF4F00]"
-                    style={{ fontFamily: 'JetBrains Mono, monospace' }}
-                  >
-                    {stats.distance.toFixed(2)}
-                  </p>
-                  <p className="text-gray-500 text-sm mt-1">km</p>
-                </div>
-              </div>
-
-              {/* Area highlight */}
-              <div className="mt-8 pt-8 border-t border-[#222222] text-center">
-                <p className="text-gray-500 text-lg font-bold uppercase tracking-widest mb-2">
-                  ÁREA DOMINADA
-                </p>
-                <p 
-                  className="text-7xl font-black text-[#FF4F00]"
-                  style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                {/* Trophy Icon */}
+                <div 
+                  className="w-28 h-28 rounded-full flex items-center justify-center mb-8"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #FF4F00 0%, #FF8C00 100%)',
+                    boxShadow: '0 0 40px rgba(255, 79, 0, 0.5)'
+                  }}
                 >
-                  {stats.area.toLocaleString()}
-                </p>
-                <p className="text-gray-400 text-xl mt-1">metros quadrados</p>
+                  <Trophy className="w-14 h-14 text-black" />
+                </div>
+
+                {/* Dynamic Title */}
+                <div className="text-center mb-10">
+                  <p 
+                    className="text-5xl font-black tracking-wider mb-2"
+                    style={{ fontFamily: 'Inter, sans-serif' }}
+                  >
+                    <span style={{ color: '#FF4F00' }}>#{conquestNumber}</span>
+                    <span className="text-white"> TERRITÓRIO</span>
+                  </p>
+                  <p 
+                    className="text-6xl font-black tracking-tight"
+                    style={{ color: '#FF4F00', fontFamily: 'Inter, sans-serif' }}
+                  >
+                    CONQUISTADO!
+                  </p>
+                </div>
+
+                {/* Stats Block */}
+                <div 
+                  className="w-full rounded-3xl p-10"
+                  style={{ backgroundColor: '#121212' }}
+                >
+                  <div className="flex items-center justify-center">
+                    {/* KM */}
+                    <div className="flex-1 text-center px-6">
+                      <p 
+                        className="text-6xl font-bold tracking-wider mb-3"
+                        style={{ 
+                          fontFamily: 'JetBrains Mono, monospace',
+                          color: '#FFFFFF',
+                          letterSpacing: '0.05em'
+                        }}
+                      >
+                        {stats.distance.toFixed(2)}
+                      </p>
+                      <p 
+                        className="text-xl font-medium uppercase tracking-[0.2em]"
+                        style={{ color: '#666666' }}
+                      >
+                        KM
+                      </p>
+                    </div>
+
+                    {/* Divider */}
+                    <div 
+                      className="w-[2px] h-24"
+                      style={{ backgroundColor: '#333333' }}
+                    />
+
+                    {/* Tempo */}
+                    <div className="flex-1 text-center px-6">
+                      <p 
+                        className="text-6xl font-bold tracking-wider mb-3"
+                        style={{ 
+                          fontFamily: 'JetBrains Mono, monospace',
+                          color: '#FFFFFF',
+                          letterSpacing: '0.05em'
+                        }}
+                      >
+                        {formatTime(stats.duration)}
+                      </p>
+                      <p 
+                        className="text-xl font-medium uppercase tracking-[0.2em]"
+                        style={{ color: '#666666' }}
+                      >
+                        Tempo
+                      </p>
+                    </div>
+
+                    {/* Divider */}
+                    <div 
+                      className="w-[2px] h-24"
+                      style={{ backgroundColor: '#333333' }}
+                    />
+
+                    {/* M² */}
+                    <div className="flex-1 text-center px-6">
+                      <p 
+                        className="text-6xl font-bold tracking-wider mb-3"
+                        style={{ 
+                          fontFamily: 'JetBrains Mono, monospace',
+                          color: '#FF4F00',
+                          letterSpacing: '0.05em'
+                        }}
+                      >
+                        {stats.area.toLocaleString()}
+                      </p>
+                      <p 
+                        className="text-xl font-medium uppercase tracking-[0.2em]"
+                        style={{ color: '#666666' }}
+                      >
+                        M²
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
+          </div>
+
+          {/* Bottom Branding Watermark */}
+          <div className="absolute bottom-12 left-0 right-0 flex justify-center">
+            <p 
+              className="text-xl font-bold tracking-[0.4em] uppercase"
+              style={{ color: 'rgba(255, 79, 0, 0.6)' }}
+            >
+              @ZONNA.APP
+            </p>
           </div>
         </div>
       </div>
@@ -276,28 +336,32 @@ export function ZonnaSnapshot({
       {/* Action Buttons */}
       <div className="p-4 pb-8 safe-bottom flex gap-4">
         <Button
-          variant="secondary"
+          variant="ghost"
           size="lg"
           onClick={handleDownload}
           disabled={!generatedImage || isGenerating}
-          className="flex-1 py-6 rounded-2xl font-bold uppercase tracking-wider"
+          className="flex-1 py-5 rounded-2xl font-semibold uppercase tracking-wider border border-border hover:border-primary/50 transition-all"
         >
           <Download className="w-5 h-5 mr-2" />
           Salvar
         </Button>
-        <Button
-          size="lg"
+        <button
           onClick={handleShare}
           disabled={isGenerating}
-          className="flex-1 py-6 rounded-2xl bg-gradient-to-r from-[#FF4F00] to-[#FF8C00] text-white font-black uppercase tracking-wider glow-zonna-intense"
+          className="flex-1 py-5 rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+          style={{
+            backgroundColor: 'transparent',
+            border: '2px solid #FF4F00',
+            color: '#FF4F00',
+          }}
         >
           {isGenerating ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+            <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           ) : (
-            <Share2 className="w-5 h-5 mr-2" />
+            <Share2 className="w-5 h-5" />
           )}
           Gerar Story
-        </Button>
+        </button>
       </div>
     </motion.div>
   );
