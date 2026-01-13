@@ -24,6 +24,8 @@ export function useProfile() {
       if (data) {
         return {
           ...data,
+          nickname: data.nickname ?? null,
+          unique_code: data.unique_code ?? '',
           current_streak: data.current_streak ?? 0,
           best_streak: data.best_streak ?? 0,
           last_activity_date: data.last_activity_date ?? null,
@@ -37,12 +39,18 @@ export function useProfile() {
   });
 
   const updateProfile = useMutation({
-    mutationFn: async (updates: Partial<Profile & { trail_color?: string }>) => {
+    mutationFn: async (updates: Partial<Profile & { trail_color?: string; nickname?: string }>) => {
       if (!user) throw new Error('Not authenticated');
+      
+      // Normalize nickname to lowercase
+      const normalizedUpdates = { ...updates };
+      if (normalizedUpdates.nickname) {
+        normalizedUpdates.nickname = normalizedUpdates.nickname.toLowerCase();
+      }
       
       const { error } = await supabase
         .from('profiles')
-        .update(updates as any)
+        .update(normalizedUpdates as any)
         .eq('user_id', user.id);
       
       if (error) throw error;
@@ -73,6 +81,8 @@ export function usePublicProfile(userId: string | null) {
       if (data) {
         return {
           ...data,
+          nickname: data.nickname ?? null,
+          unique_code: data.unique_code ?? '',
           current_streak: data.current_streak ?? 0,
           best_streak: data.best_streak ?? 0,
           last_activity_date: data.last_activity_date ?? null,

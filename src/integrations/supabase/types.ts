@@ -155,10 +155,12 @@ export type Database = {
           last_activity_date: string | null
           level: number
           name: string
+          nickname: string | null
           rank: Database["public"]["Enums"]["app_rank"]
           total_area: number
           total_km: number
           trail_color: string
+          unique_code: string
           unlocked_colors: string[]
           updated_at: string
           user_id: string
@@ -173,10 +175,12 @@ export type Database = {
           last_activity_date?: string | null
           level?: number
           name?: string
+          nickname?: string | null
           rank?: Database["public"]["Enums"]["app_rank"]
           total_area?: number
           total_km?: number
           trail_color?: string
+          unique_code?: string
           unlocked_colors?: string[]
           updated_at?: string
           user_id: string
@@ -191,10 +195,12 @@ export type Database = {
           last_activity_date?: string | null
           level?: number
           name?: string
+          nickname?: string | null
           rank?: Database["public"]["Enums"]["app_rank"]
           total_area?: number
           total_km?: number
           trail_color?: string
+          unique_code?: string
           unlocked_colors?: string[]
           updated_at?: string
           user_id?: string
@@ -211,6 +217,7 @@ export type Database = {
         Args: { xp_value: number }
         Returns: Database["public"]["Enums"]["app_rank"]
       }
+      generate_unique_code: { Args: never; Returns: string }
     }
     Enums: {
       app_rank:

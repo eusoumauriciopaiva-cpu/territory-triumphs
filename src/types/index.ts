@@ -14,6 +14,8 @@ export interface Profile {
   id: string;
   user_id: string;
   name: string;
+  nickname: string | null;
+  unique_code: string;
   avatar_url: string | null;
   level: number;
   xp: number;
