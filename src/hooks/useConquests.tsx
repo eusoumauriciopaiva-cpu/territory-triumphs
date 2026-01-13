@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import type { Conquest, Profile } from '@/types';
+import * as turf from '@turf/turf';
 
 export function useConquests() {
   const { user } = useAuth();
@@ -59,11 +60,86 @@ export function useConquests() {
         .single();
       
       if (error) throw error;
+
+      // Detect conflicts with other users' territories
+      try {
+        if (conquest.path.length >= 3) {
+          const newPolygon = turf.polygon([[...conquest.path, conquest.path[0]].map(p => [p[1], p[0]])]);
+          
+          // Get all other users' conquests
+          const { data: allConquests } = await supabase
+            .from('conquests')
+            .select('id, user_id, path, area')
+            .neq('user_id', user.id);
+
+          if (allConquests) {
+            const conflictsToCreate: {
+              invader_id: string;
+              victim_id: string;
+              conquest_id: string;
+              area_invaded: number;
+              latitude?: number;
+              longitude?: number;
+            }[] = [];
+
+            for (const existingConquest of allConquests) {
+              try {
+                const existingPath = typeof existingConquest.path === 'string' 
+                  ? JSON.parse(existingConquest.path) 
+                  : existingConquest.path;
+                
+                if (existingPath.length < 3) continue;
+                
+                const existingPolygon = turf.polygon([[...existingPath, existingPath[0]].map((p: [number, number]) => [p[1], p[0]])]);
+                
+                // Check for intersection
+                const intersection = turf.intersect(
+                  turf.featureCollection([newPolygon, existingPolygon])
+                );
+                
+                if (intersection) {
+                  const intersectionArea = Math.round(turf.area(intersection));
+                  
+                  if (intersectionArea > 10) { // Minimum 10m² to register conflict
+                    const centroid = turf.centroid(intersection);
+                    const [lng, lat] = centroid.geometry.coordinates;
+                    
+                    conflictsToCreate.push({
+                      invader_id: user.id,
+                      victim_id: existingConquest.user_id,
+                      conquest_id: data.id,
+                      area_invaded: intersectionArea,
+                      latitude: lat,
+                      longitude: lng,
+                    });
+                  }
+                }
+              } catch (e) {
+                // Skip invalid polygons
+                console.warn('Error checking conflict:', e);
+              }
+            }
+
+            // Insert all conflicts
+            if (conflictsToCreate.length > 0) {
+              await supabase
+                .from('territory_conflicts')
+                .insert(conflictsToCreate);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error detecting conflicts:', e);
+        // Don't throw - conflict detection failure shouldn't block conquest
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['conquests'] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['user-conflicts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-conflicts'] });
     },
   });
 

@@ -14,7 +14,8 @@ import {
   TrendingUp,
   Target,
   Eye,
-  ChevronDown
+  ChevronDown,
+  Swords
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { supabase } from '@/integrations/supabase/client';
 import { RANK_CONFIG } from '@/types';
 import { ZonnaMap3D } from './ZonnaMap3D';
+import { AdminConflictFeed } from './AdminConflictFeed';
 import type { Conquest } from '@/types';
 
 interface DashboardStats {
@@ -455,6 +457,19 @@ export function AdminCommandPanel() {
                 ))
               )}
             </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* CONFLICTS SECTION */}
+        <AccordionItem value="conflicts" className="bg-card rounded-2xl border border-destructive/30 overflow-hidden">
+          <AccordionTrigger className="px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-3">
+              <Swords className="w-5 h-5 text-destructive" />
+              <span className="font-mono font-bold text-sm">CONFLITOS TERRITORIAIS</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="p-4">
+            <AdminConflictFeed />
           </AccordionContent>
         </AccordionItem>
       </Accordion>
