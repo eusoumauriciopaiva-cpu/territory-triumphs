@@ -437,25 +437,25 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[11000] flex items-center justify-center p-6 bg-background/80 backdrop-blur-xl"
+            className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl"
           >
             <motion.div
-              initial={{ scale: 0.8, y: 50 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-              className="glass-dark rounded-4xl p-8 w-full max-w-sm border-2 border-primary glow-zonna-intense text-center"
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="victory-card-bg rounded-3xl p-8 w-full max-w-sm text-center"
             >
               {/* Trophy Icon */}
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1, rotate: [0, -10, 10, 0] }}
                 transition={{ delay: 0.2, duration: 0.6 }}
-                className="relative mx-auto mb-6 w-24 h-24"
+                className="relative mx-auto mb-6 w-20 h-20"
               >
                 <div className="absolute inset-0 bg-primary rounded-full blur-xl opacity-50 animate-pulse" />
-                <div className="relative bg-gradient-zonna rounded-full w-full h-full flex items-center justify-center glow-zonna-intense">
-                  <Trophy className="w-12 h-12 text-primary-foreground" />
+                <div className="relative bg-primary rounded-full w-full h-full flex items-center justify-center shadow-[0_0_40px_rgba(255,79,0,0.6)]">
+                  <Trophy className="w-10 h-10 text-black" />
                 </div>
               </motion.div>
 
@@ -463,7 +463,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-4xl font-black text-foreground mb-2 text-glow-zonna"
+                className="text-3xl font-black text-foreground mb-1"
               >
                 TERRITÓRIO
               </motion.h2>
@@ -471,59 +471,79 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="text-2xl font-black text-primary mb-6"
+                className="text-xl font-black text-primary mb-8"
               >
                 CONQUISTADO!
               </motion.p>
 
-              {/* Stats */}
+              {/* Stats with Dividers */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="grid grid-cols-3 gap-4 mb-8 p-4 bg-card rounded-2xl"
+                className="flex items-stretch justify-center gap-0 mb-8 py-6 px-4 bg-black/40 rounded-2xl border border-border"
               >
-                <div>
-                  <p className="text-2xl font-mono-display font-bold text-foreground">
+                {/* KM */}
+                <div className="flex-1 text-center px-4">
+                  <p className="font-mono-stats text-3xl font-bold tracking-wider text-foreground mb-2">
                     {lastStats.distance.toFixed(2)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase">KM</p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
+                    KM
+                  </p>
                 </div>
-                <div>
-                  <p className="text-2xl font-mono-display font-bold text-foreground">
+
+                {/* Divider */}
+                <div className="stat-divider self-stretch" />
+
+                {/* Tempo */}
+                <div className="flex-1 text-center px-4">
+                  <p className="font-mono-stats text-3xl font-bold tracking-wider text-foreground mb-2">
                     {formatTime(lastStats.duration)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Tempo</p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
+                    Tempo
+                  </p>
                 </div>
-                <div>
-                  <p className="text-2xl font-mono-display font-bold text-primary">
+
+                {/* Divider */}
+                <div className="stat-divider self-stretch" />
+
+                {/* Área */}
+                <div className="flex-1 text-center px-4">
+                  <p className="font-mono-stats text-3xl font-bold tracking-wider text-primary mb-2">
                     {lastStats.area.toLocaleString()}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-bold uppercase">m²</p>
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
+                    M²
+                  </p>
                 </div>
               </motion.div>
 
+              {/* Action Buttons */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="space-y-3"
+                className="space-y-4"
               >
+                {/* Primary Button - DOMINAR */}
+                <button
+                  onClick={handleCloseVictory}
+                  className="btn-zonna-primary w-full py-5 rounded-xl text-lg uppercase tracking-widest"
+                >
+                  Continuar Dominando
+                </button>
+
+                {/* Secondary Button - Gerar Story */}
                 <Button
                   onClick={() => setShowSnapshot(true)}
                   size="lg"
-                  variant="secondary"
-                  className="w-full py-5 rounded-2xl font-bold uppercase tracking-wider border border-primary/30"
+                  variant="ghost"
+                  className="w-full py-4 rounded-xl font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground border border-border hover:border-primary/50 transition-all"
                 >
                   <Share2 className="w-5 h-5 mr-2" />
                   Gerar Story
-                </Button>
-                <Button
-                  onClick={handleCloseVictory}
-                  size="lg"
-                  className="w-full bg-gradient-zonna text-primary-foreground font-black uppercase tracking-widest py-6 rounded-2xl glow-zonna"
-                >
-                  Continuar Dominando
                 </Button>
               </motion.div>
             </motion.div>

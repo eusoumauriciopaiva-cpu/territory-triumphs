@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -97,6 +97,11 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  .font-mono-stats {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', monospace;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
+
   body {
     @apply bg-background text-foreground;
     overflow: hidden;
@@ -174,6 +179,37 @@
   .rank-grandmaster { background: hsl(var(--rank-grandmaster)); }
   .rank-emperor { 
     background: linear-gradient(135deg, hsl(45 100% 50%) 0%, hsl(35 100% 60%) 50%, hsl(45 100% 50%) 100%);
+  }
+
+  /* Victory Card */
+  .victory-card-bg {
+    background: #121212;
+    border: 1px solid hsl(18 98% 50% / 0.5);
+  }
+
+  /* Stat divider */
+  .stat-divider {
+    width: 1px;
+    background: hsl(0 0% 25%);
+  }
+
+  /* ZONNA Primary Button */
+  .btn-zonna-primary {
+    background: #FF4F00;
+    color: #000000;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    transition: all 0.2s ease;
+  }
+
+  .btn-zonna-primary:hover {
+    background: #FF6A1F;
+    transform: scale(1.02);
+    box-shadow: 0 0 30px hsl(18 98% 50% / 0.5);
+  }
+
+  .btn-zonna-primary:active {
+    transform: scale(0.98);
   }
 }
 
