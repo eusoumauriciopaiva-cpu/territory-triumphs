@@ -158,6 +158,8 @@ export type Database = {
           rank: Database["public"]["Enums"]["app_rank"]
           total_area: number
           total_km: number
+          trail_color: string
+          unlocked_colors: string[]
           updated_at: string
           user_id: string
           xp: number
@@ -174,6 +176,8 @@ export type Database = {
           rank?: Database["public"]["Enums"]["app_rank"]
           total_area?: number
           total_km?: number
+          trail_color?: string
+          unlocked_colors?: string[]
           updated_at?: string
           user_id: string
           xp?: number
@@ -190,6 +194,8 @@ export type Database = {
           rank?: Database["public"]["Enums"]["app_rank"]
           total_area?: number
           total_km?: number
+          trail_color?: string
+          unlocked_colors?: string[]
           updated_at?: string
           user_id?: string
           xp?: number

@@ -217,6 +217,57 @@
   display: none !important;
 }
 
+/* ZONNA Position Marker with Pulse Effect */
+.zonna-position-marker {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.zonna-marker-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px;
+  height: 16px;
+  background: #FF4F00;
+  border-radius: 50%;
+  border: 3px solid #FFFFFF;
+  box-shadow: 0 0 20px #FF4F00, 0 0 40px #FF4F0080;
+  z-index: 3;
+}
+
+.zonna-pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FF4F0040;
+  animation: zonna-pulse 2s ease-out infinite;
+  z-index: 1;
+}
+
+.zonna-pulse-ring-2 {
+  animation-delay: 0.5s;
+}
+
+@keyframes zonna-pulse {
+  0% {
+    width: 24px;
+    height: 24px;
+    opacity: 0.8;
+  }
+  100% {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
