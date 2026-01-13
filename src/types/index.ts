@@ -20,6 +20,9 @@ export interface Profile {
   total_area: number;
   total_km: number;
   rank: AppRank;
+  current_streak: number;
+  best_streak: number;
+  last_activity_date: string | null;
   created_at: string;
   updated_at: string;
 }

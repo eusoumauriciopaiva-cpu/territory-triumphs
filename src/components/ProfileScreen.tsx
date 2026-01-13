@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Edit2, Trophy, MapPin, LogOut, Camera } from 'lucide-react';
+import { Edit2, Trophy, LogOut, Flame, MapPin, Target } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { RankBadge, RankProgress } from './RankBadge';
+import { EloBadge, XPProgressBar, StreakBadge, EloCard } from './EloSystem';
+import { ZonnaMap3D } from './ZonnaMap3D';
 import type { Profile, Conquest } from '@/types';
+import { RANK_CONFIG } from '@/types';
 
 interface ProfileScreenProps {
   profile: Profile | null;
@@ -23,6 +25,7 @@ export function ProfileScreen({
 }: ProfileScreenProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile?.name || '');
+  const [showHeatmap, setShowHeatmap] = useState(false);
 
   const handleSave = () => {
     onUpdateProfile({ name });
@@ -32,90 +35,136 @@ export function ProfileScreen({
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Carregando perfil...</p>
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-4 pb-24 overflow-y-auto h-full flex flex-col items-center">
-      {/* Avatar & Name */}
-      <div className="relative mb-4 mt-4">
-        <div className="w-28 h-28 rounded-3xl bg-gradient-neon p-1 rotate-3 glow-neon">
-          <div className="w-full h-full rounded-[1.3rem] bg-background border-4 border-background overflow-hidden flex items-center justify-center text-4xl font-black">
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              profile.name.charAt(0).toUpperCase()
-            )}
-          </div>
-        </div>
-        <div className="absolute -bottom-1 -right-1 bg-gradient-neon px-3 py-1 rounded-lg border-4 border-background font-black text-xs -rotate-6 tracking-tight uppercase">
-          LVL {profile.level}
-        </div>
-      </div>
-
-      <h2 className="text-2xl font-black italic tracking-tighter mb-1">{profile.name}</h2>
-      
-      <RankBadge rank={profile.rank} size="lg" />
-
-      <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="sm" className="mt-4 text-primary">
-            <Edit2 className="w-4 h-4 mr-2" />
-            Editar Perfil
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="glass border-border">
-          <DialogHeader>
-            <DialogTitle className="font-black">Editar Perfil</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase text-muted-foreground">Nome</label>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="bg-card border-border"
-              />
+    <div className="p-4 pb-24 overflow-y-auto h-full scrollbar-hide">
+      {/* Header with Avatar */}
+      <div className="flex flex-col items-center mb-6">
+        <div className="relative mb-4">
+          <div className="w-24 h-24 rounded-3xl bg-gradient-zonna p-0.5 rotate-2 glow-zonna">
+            <div className="w-full h-full rounded-[1.3rem] bg-background border-4 border-background overflow-hidden flex items-center justify-center text-3xl font-black">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                profile.name.charAt(0).toUpperCase()
+              )}
             </div>
-            <Button onClick={handleSave} className="w-full bg-gradient-neon">
-              Salvar
-            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+          <div className="absolute -bottom-2 -right-2">
+            <EloBadge rank={profile.rank} size="md" showLabel={false} />
+          </div>
+        </div>
 
-      {/* Rank Progress */}
-      <div className="w-full max-w-sm mt-6 bg-card rounded-2xl p-4 border border-border">
-        <RankProgress xp={profile.xp} rank={profile.rank} />
+        <h2 className="text-2xl font-black tracking-tighter text-foreground">{profile.name}</h2>
+        <p className="text-sm text-muted-foreground mb-3">
+          Nível {profile.level} • {RANK_CONFIG[profile.rank].label}
+        </p>
+
+        <div className="flex items-center gap-3">
+          <StreakBadge streak={profile.current_streak || 0} bestStreak={profile.best_streak} />
+          
+          <Dialog open={isEditing} onOpenChange={setIsEditing}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-primary">
+                <Edit2 className="w-4 h-4 mr-1" />
+                Editar
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="glass border-border">
+              <DialogHeader>
+                <DialogTitle className="font-black">Editar Perfil</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">Nome</label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="bg-card border-border"
+                  />
+                </div>
+                <Button onClick={handleSave} className="w-full bg-gradient-zonna">
+                  Salvar
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 w-full max-w-sm mt-4">
-        <div className="bg-card p-5 rounded-2xl border border-border text-center">
-          <p className="text-2xl font-black tracking-tighter">{Number(profile.total_km).toFixed(1)}</p>
-          <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">KM Totais</p>
+      {/* XP Progress */}
+      <div className="bg-card rounded-2xl p-4 border border-border mb-4">
+        <XPProgressBar profile={profile} />
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-card p-4 rounded-2xl border border-border text-center">
+          <MapPin className="w-5 h-5 mx-auto mb-2 text-primary" />
+          <p className="text-xl font-mono-display font-bold text-foreground">
+            {Number(profile.total_km).toFixed(1)}
+          </p>
+          <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">KM</p>
         </div>
-        <div className="bg-card p-5 rounded-2xl border border-border text-center">
-          <p className="text-2xl font-black tracking-tighter">{profile.total_area.toLocaleString()}</p>
-          <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">m² Conquistados</p>
+        <div className="bg-card p-4 rounded-2xl border border-border text-center">
+          <Target className="w-5 h-5 mx-auto mb-2 text-primary" />
+          <p className="text-xl font-mono-display font-bold text-primary">
+            {profile.total_area.toLocaleString()}
+          </p>
+          <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">m²</p>
+        </div>
+        <div className="bg-card p-4 rounded-2xl border border-border text-center">
+          <Flame className="w-5 h-5 mx-auto mb-2 text-orange-400" />
+          <p className="text-xl font-mono-display font-bold text-orange-400">
+            {profile.best_streak || 0}
+          </p>
+          <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">Streak</p>
         </div>
       </div>
+
+      {/* Heatmap Toggle */}
+      <div className="mb-4">
+        <Button
+          variant={showHeatmap ? "default" : "secondary"}
+          onClick={() => setShowHeatmap(!showHeatmap)}
+          className="w-full"
+        >
+          <Target className="w-4 h-4 mr-2" />
+          {showHeatmap ? 'Ocultar Mapa de Calor' : 'Ver Meus Domínios'}
+        </Button>
+      </div>
+
+      {/* Heatmap */}
+      {showHeatmap && (
+        <div className="h-64 rounded-2xl overflow-hidden border border-border mb-6">
+          <ZonnaMap3D
+            userPosition={history.length > 0 ? history[0].path[0] : null}
+            heatmapMode={true}
+            userConquests={history}
+          />
+        </div>
+      )}
 
       {/* History */}
-      <div className="w-full mt-6">
+      <div className="mb-6">
         <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 ml-1">
-          Meu Histórico
+          Meus Domínios
         </h3>
         
         {history.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8 text-sm italic">
-            Nenhuma conquista registrada.
-          </p>
+          <div className="text-center py-8 bg-card rounded-2xl border border-border">
+            <Trophy className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Nenhum território conquistado ainda.
+            </p>
+          </div>
         ) : (
           <div className="space-y-2">
-            {history.map((conquest, index) => (
+            {history.slice(0, 10).map((conquest, index) => (
               <button
                 key={conquest.id}
                 onClick={() => onShowOnMap(conquest)}
@@ -125,9 +174,14 @@ export function ProfileScreen({
                   <div className="bg-primary/10 p-2 rounded-lg border border-primary/20 group-hover:bg-primary/20 transition-colors">
                     <Trophy className="w-4 h-4 text-primary" />
                   </div>
-                  <span className="font-bold text-sm">Conquista #{history.length - index}</span>
+                  <div className="text-left">
+                    <span className="font-bold text-sm block">Território #{history.length - index}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {Number(conquest.distance).toFixed(2)} km
+                    </span>
+                  </div>
                 </div>
-                <span className="text-primary font-mono font-bold text-sm">
+                <span className="text-primary font-mono-display font-bold text-sm">
                   {conquest.area.toLocaleString()} m²
                 </span>
               </button>
@@ -140,7 +194,7 @@ export function ProfileScreen({
       <Button 
         variant="ghost" 
         onClick={onSignOut}
-        className="mt-8 text-destructive hover:bg-destructive/10"
+        className="w-full text-destructive hover:bg-destructive/10"
       >
         <LogOut className="w-4 h-4 mr-2" />
         Sair da Conta

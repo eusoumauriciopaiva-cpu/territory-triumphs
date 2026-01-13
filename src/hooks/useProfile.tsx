@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import type { Profile, AppRank } from '@/types';
+import type { Profile } from '@/types';
 
 export function useProfile() {
   const { user } = useAuth();
@@ -19,7 +19,17 @@ export function useProfile() {
         .maybeSingle();
       
       if (error) throw error;
-      return data as Profile | null;
+      
+      // Map to Profile type with defaults for new fields
+      if (data) {
+        return {
+          ...data,
+          current_streak: data.current_streak ?? 0,
+          best_streak: data.best_streak ?? 0,
+          last_activity_date: data.last_activity_date ?? null,
+        } as Profile;
+      }
+      return null;
     },
     enabled: !!user,
   });
@@ -41,4 +51,33 @@ export function useProfile() {
   });
 
   return { profile, isLoading, updateProfile };
+}
+
+// Hook to fetch any user's profile by ID
+export function usePublicProfile(userId: string | null) {
+  return useQuery({
+    queryKey: ['public-profile', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (data) {
+        return {
+          ...data,
+          current_streak: data.current_streak ?? 0,
+          best_streak: data.best_streak ?? 0,
+          last_activity_date: data.last_activity_date ?? null,
+        } as Profile;
+      }
+      return null;
+    },
+    enabled: !!userId,
+  });
 }
