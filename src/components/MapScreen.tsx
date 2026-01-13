@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ZonnaMap3D } from './ZonnaMap3D';
 import { MapStyleToggle } from './MapStyleToggle';
 import { Button } from './ui/button';
@@ -16,6 +16,19 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const [followUser, setFollowUser] = useState(false);
   const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
+
+  // Auto-locate user on mount
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserPosition([pos.coords.latitude, pos.coords.longitude]);
+        setFollowUser(true);
+        setTimeout(() => setFollowUser(false), 1000);
+      },
+      () => {},
+      { enableHighAccuracy: true }
+    );
+  }, []);
 
   const handleLocate = () => {
     navigator.geolocation.getCurrentPosition(
