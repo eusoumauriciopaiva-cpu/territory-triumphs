@@ -319,6 +319,7 @@ function AppContent() {
             onClose={() => setIsRecordOpen(false)}
             onFinish={handleFinishConquest}
             conquestCount={myConquests.length}
+            trailColor={(profile as any)?.trail_color || '#FF4F00'}
           />
         )}
       </AnimatePresence>

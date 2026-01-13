@@ -21,11 +21,12 @@ interface RecordingDashboardProps {
     mode: RecordMode;
   }) => void;
   conquestCount: number;
+  trailColor?: string;
 }
 
 type GpsStatus = 'searching' | 'ok' | 'denied';
 
-export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }: RecordingDashboardProps) {
+export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, trailColor = '#FF4F00' }: RecordingDashboardProps) {
   const [mode, setMode] = useState<RecordMode>('livre');
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -238,6 +239,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
           followUser={isRecording}
           recordingPath={path}
           onVictoryZoom={victoryZoom}
+          trailColor={trailColor}
         />
       </div>
 
@@ -560,6 +562,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }:
             conquestNumber={conquestCount + 1}
             stats={lastStats}
             path={lastPath}
+            trailColor={trailColor}
           />
         )}
       </AnimatePresence>

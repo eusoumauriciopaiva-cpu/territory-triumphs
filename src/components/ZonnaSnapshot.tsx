@@ -16,6 +16,7 @@ interface ZonnaSnapshotProps {
     pace: number; // min/km
   };
   path: [number, number][];
+  trailColor?: string;
 }
 
 export function ZonnaSnapshot({ 
@@ -23,7 +24,8 @@ export function ZonnaSnapshot({
   onClose, 
   conquestNumber, 
   stats, 
-  path 
+  path,
+  trailColor = '#FF4F00',
 }: ZonnaSnapshotProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -167,6 +169,7 @@ export function ZonnaSnapshot({
               userPosition={path.length > 0 ? path[Math.floor(path.length / 2)] : null}
               recordingPath={path}
               followUser={false}
+              trailColor={trailColor}
             />
             {/* Dark overlay for contrast */}
             <div className="absolute inset-0 bg-black/40" />
