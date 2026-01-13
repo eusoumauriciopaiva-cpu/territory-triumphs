@@ -9,7 +9,7 @@ import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaCodex } from './ZonnaCodex';
 import { AvatarUpload } from './AvatarUpload';
 import { useNicknameValidation, validateNicknameFormat } from '@/hooks/useNicknameValidation';
-import { useIsDeveloper } from '@/hooks/useDeveloper';
+import { useIsAdmin } from '@/hooks/useAdmin';
 import type { Profile, Conquest } from '@/types';
 import { RANK_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
@@ -36,8 +36,8 @@ export function ProfileScreen({
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [activeSection, setActiveSection] = useState<'stats' | 'codex' | 'history'>('stats');
   
-  // Check if user is developer
-  const { data: isDeveloper } = useIsDeveloper();
+  // Check if user is admin
+  const { data: isAdmin } = useIsAdmin();
 
   // Nickname validation
   const nicknameValidation = useNicknameValidation(nickname);
@@ -333,16 +333,16 @@ export function ProfileScreen({
         </div>
       )}
 
-      {/* Developer Access - Only visible to developer */}
-      {isDeveloper && (
+      {/* Admin Command Center - Only visible to admin */}
+      {isAdmin && (
         <div className="mt-4">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/dev')}
-            className="w-full border-primary/50 text-primary hover:bg-primary/10"
+            onClick={() => navigate('/admin')}
+            className="w-full border-primary/50 text-primary hover:bg-primary/10 font-mono"
           >
             <Shield className="w-4 h-4 mr-2" />
-            Developer Dashboard
+            COMANDO ZONNA
           </Button>
         </div>
       )}
