@@ -40,18 +40,22 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('map');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // Redirect if not authenticated or not the master admin
-  // SECURITY: Only eusoumauriciopaiva1@gmail.com can access this dashboard
+  // Security: Redirect non-authenticated users, but show proper UI states
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/');
-      return;
-    }
-    
-    // Block access if not admin or email doesn't match
-    if (!adminLoading && (isAdmin === false || user?.email !== 'eusoumauriciopaiva1@gmail.com')) {
-      navigate('/');
+    // Only redirect after we've finished checking auth AND admin status
+    if (!authLoading && !adminLoading) {
+      if (!user) {
+        setIsRedirecting(true);
+        navigate('/');
+        return;
+      }
+      // Allow only master admin
+      if (isAdmin === false || user?.email !== 'eusoumauriciopaiva1@gmail.com') {
+        setIsRedirecting(true);
+        navigate('/');
+      }
     }
   }, [authLoading, user, adminLoading, isAdmin, navigate]);
 
@@ -65,35 +69,44 @@ export default function AdminDashboard() {
     return group.group_members?.map((m: any) => m.user_id) || [];
   };
 
-  // Show loading state
-  if (authLoading || adminLoading) {
+  // Show loading state with proper visual feedback
+  if (authLoading || adminLoading || isRedirecting) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground font-mono text-sm tracking-wider">
-            VERIFICANDO ACESSO...
+          <div className="relative w-16 h-16 mx-auto mb-6">
+            <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <Shield className="absolute inset-0 m-auto w-6 h-6 text-primary" />
+          </div>
+          <p className="text-primary font-mono text-sm tracking-[0.3em] animate-pulse">
+            {isRedirecting ? 'REDIRECIONANDO' : 'VERIFICANDO ACESSO'}
+          </p>
+          <p className="text-muted-foreground font-mono text-xs mt-2">
+            PAINEL DE CONTROLE ZONNA
           </p>
         </div>
       </div>
     );
   }
 
-  // Show access denied message instead of blank page
-  if (!isAdmin || user?.email !== 'eusoumauriciopaiva1@gmail.com') {
+  // Show access denied message instead of blank page (fallback if redirect fails)
+  if (!user || !isAdmin || user?.email !== 'eusoumauriciopaiva1@gmail.com') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-center p-8">
-          <Shield className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h1 className="text-xl font-black text-foreground mb-2 font-mono">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
+            <Shield className="w-8 h-8 text-destructive" />
+          </div>
+          <h1 className="text-xl font-black text-foreground mb-2 font-mono tracking-wider">
             ACESSO NEGADO
           </h1>
           <p className="text-muted-foreground font-mono text-sm mb-6">
             Área restrita ao Administrador Master
           </p>
-          <Button onClick={() => navigate('/')} className="font-mono">
+          <Button onClick={() => navigate('/')} className="font-mono bg-primary text-black hover:bg-primary/90">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            VOLTAR
+            VOLTAR À HOME
           </Button>
         </div>
       </div>
@@ -104,7 +117,7 @@ export default function AdminDashboard() {
   const totalKm = profiles?.reduce((sum, p) => sum + Number(p.total_km), 0) || 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/90 backdrop-blur-xl border-b border-primary/20 p-4">
         <div className="flex items-center justify-between">

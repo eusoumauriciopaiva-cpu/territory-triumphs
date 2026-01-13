@@ -229,6 +229,21 @@ export function AdminGlobalMap({
   }, [conquests, filterUserIds, loaded]);
 
   return (
-    <div ref={mapContainer} className="w-full h-full rounded-xl overflow-hidden" />
+    <div className="w-full h-full rounded-xl overflow-hidden relative bg-[#1a1a1b]">
+      <div ref={mapContainer} className="w-full h-full" />
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1b]">
+          <div className="text-center">
+            <div className="relative w-12 h-12 mx-auto mb-4">
+              <div className="absolute inset-0 border-4 border-primary/20 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <p className="text-primary font-mono text-xs tracking-wider animate-pulse">
+              CARREGANDO MAPA
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
