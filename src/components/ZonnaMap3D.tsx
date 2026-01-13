@@ -274,27 +274,33 @@ export function ZonnaMap3D({
     });
   }, [mapStyle, loaded, recordingPath, trailColor]);
 
-  // Update user marker with pulse effect
+  // Update user marker with pulse effect - persists across style changes
   useEffect(() => {
     if (!map.current || !loaded || !userPosition) return;
 
+    // Remove existing marker if it exists (ensures it's re-added after style change)
     if (markerObjRef.current) {
-      markerObjRef.current.setLngLat([userPosition[1], userPosition[0]]);
-    } else {
-      // Create custom marker element with pulse
-      const el = document.createElement('div');
-      el.className = 'zonna-position-marker';
-      el.innerHTML = `
-        <div class="zonna-pulse-ring"></div>
-        <div class="zonna-pulse-ring zonna-pulse-ring-2"></div>
-        <div class="zonna-marker-core"></div>
-      `;
-      
-      markerRef.current = el;
-      markerObjRef.current = new maplibregl.Marker({ element: el })
-        .setLngLat([userPosition[1], userPosition[0]])
-        .addTo(map.current);
+      try {
+        markerObjRef.current.remove();
+      } catch (e) {
+        // Marker may already be removed
+      }
+      markerObjRef.current = null;
     }
+
+    // Create custom marker element with pulse
+    const el = document.createElement('div');
+    el.className = 'zonna-position-marker';
+    el.innerHTML = `
+      <div class="zonna-pulse-ring"></div>
+      <div class="zonna-pulse-ring zonna-pulse-ring-2"></div>
+      <div class="zonna-marker-core"></div>
+    `;
+    
+    markerRef.current = el;
+    markerObjRef.current = new maplibregl.Marker({ element: el })
+      .setLngLat([userPosition[1], userPosition[0]])
+      .addTo(map.current);
 
     if (followUser) {
       map.current.easeTo({
@@ -302,7 +308,7 @@ export function ZonnaMap3D({
         duration: 500,
       });
     }
-  }, [userPosition, followUser, loaded]);
+  }, [userPosition, followUser, loaded, mapStyle]);
 
   // Update recording path
   useEffect(() => {
