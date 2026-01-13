@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Conquest } from '@/types';
+import { CARTO_DARK_STYLE, applyZonnaStyleOverrides } from '@/lib/mapStyle';
 
 interface ZonnaMap3DProps {
   userPosition: [number, number] | null;
@@ -14,8 +15,6 @@ interface ZonnaMap3DProps {
   userConquests?: Conquest[];
   trailColor?: string;
 }
-
-const DARK_STYLE = `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`;
 
 export function ZonnaMap3D({
   userPosition,
@@ -42,7 +41,7 @@ export function ZonnaMap3D({
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: DARK_STYLE,
+      style: CARTO_DARK_STYLE,
       center: [initialCenter[1], initialCenter[0]],
       zoom: 16,
       pitch: 60,
@@ -52,6 +51,9 @@ export function ZonnaMap3D({
 
     map.current.on('load', () => {
       if (!map.current) return;
+
+      // Apply ZONNA High-Contrast Dark style overrides (Strava-inspired)
+      applyZonnaStyleOverrides(map.current);
 
       // Add 3D buildings layer
       const layers = map.current.getStyle().layers;
@@ -67,7 +69,7 @@ export function ZonnaMap3D({
           type: 'fill-extrusion',
           minzoom: 14,
           paint: {
-            'fill-extrusion-color': '#1a1a1a',
+            'fill-extrusion-color': '#252525',
             'fill-extrusion-height': ['get', 'render_height'],
             'fill-extrusion-base': ['get', 'render_min_height'],
             'fill-extrusion-opacity': 0.8,
