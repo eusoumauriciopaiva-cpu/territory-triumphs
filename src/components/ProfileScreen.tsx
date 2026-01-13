@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Edit2, Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Edit2, Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -8,6 +9,7 @@ import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaCodex } from './ZonnaCodex';
 import { AvatarUpload } from './AvatarUpload';
 import { useNicknameValidation, validateNicknameFormat } from '@/hooks/useNicknameValidation';
+import { useIsDeveloper } from '@/hooks/useDeveloper';
 import type { Profile, Conquest } from '@/types';
 import { RANK_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
@@ -27,11 +29,15 @@ export function ProfileScreen({
   onShowOnMap,
   onSignOut 
 }: ProfileScreenProps) {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile?.name || '');
   const [nickname, setNickname] = useState(profile?.nickname || '');
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [activeSection, setActiveSection] = useState<'stats' | 'codex' | 'history'>('stats');
+  
+  // Check if user is developer
+  const { data: isDeveloper } = useIsDeveloper();
 
   // Nickname validation
   const nicknameValidation = useNicknameValidation(nickname);
@@ -327,8 +333,22 @@ export function ProfileScreen({
         </div>
       )}
 
+      {/* Developer Access - Only visible to developer */}
+      {isDeveloper && (
+        <div className="mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/dev')}
+            className="w-full border-primary/50 text-primary hover:bg-primary/10"
+          >
+            <Shield className="w-4 h-4 mr-2" />
+            Developer Dashboard
+          </Button>
+        </div>
+      )}
+
       {/* Sign Out - Always visible at bottom */}
-      <div className="mt-8">
+      <div className="mt-4">
         <Button 
           variant="ghost" 
           onClick={onSignOut}
