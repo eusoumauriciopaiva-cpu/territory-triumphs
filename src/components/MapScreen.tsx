@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Map3D } from './Map3D';
+import { ZonnaMap3D } from './ZonnaMap3D';
 import { Button } from './ui/button';
 import { Layers, Focus } from 'lucide-react';
 import type { Conquest } from '@/types';
@@ -28,7 +28,7 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
 
   return (
     <div className="h-full w-full relative">
-      <Map3D 
+      <ZonnaMap3D 
         conquests={conquests}
         selectedConquest={selectedConquest}
         userPosition={userPosition}

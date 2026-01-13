@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Square, Trophy, MapPin, AlertCircle, Flame, Target } from 'lucide-react';
+import { X, Play, Square, Trophy, MapPin, AlertCircle, Flame, Target, Share2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { ZonnaMap3D } from './ZonnaMap3D';
+import { ZonnaSnapshot } from './ZonnaSnapshot';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import type { RecordMode } from '@/types';
@@ -17,11 +18,12 @@ interface RecordingDashboardProps {
     duration: number;
     mode: RecordMode;
   }) => void;
+  conquestCount: number;
 }
 
 type GpsStatus = 'searching' | 'ok' | 'denied';
 
-export function RecordingDashboard({ isOpen, onClose, onFinish }: RecordingDashboardProps) {
+export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount }: RecordingDashboardProps) {
   const [mode, setMode] = useState<RecordMode>('livre');
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
@@ -33,7 +35,9 @@ export function RecordingDashboard({ isOpen, onClose, onFinish }: RecordingDashb
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('searching');
   const [showVictory, setShowVictory] = useState(false);
   const [victoryZoom, setVictoryZoom] = useState(false);
-  const [lastStats, setLastStats] = useState({ area: 0, distance: 0, duration: 0 });
+  const [lastStats, setLastStats] = useState({ area: 0, distance: 0, duration: 0, pace: 0 });
+  const [showSnapshot, setShowSnapshot] = useState(false);
+  const [lastPath, setLastPath] = useState<[number, number][]>([]);
 
   const watchId = useRef<number | null>(null);
 
@@ -134,8 +138,10 @@ export function RecordingDashboard({ isOpen, onClose, onFinish }: RecordingDashb
     const polygonPath = [...path, path[0]];
     const turfPoly = turf.polygon([polygonPath.map((p) => [p[1], p[0]])]);
     const area = Math.round(turf.area(turfPoly));
+    const pace = distance > 0 ? (seconds / 60) / distance : 0;
 
-    setLastStats({ area, distance, duration: seconds });
+    setLastStats({ area, distance, duration: seconds, pace });
+    setLastPath(polygonPath);
     setVictoryZoom(true);
     
     setTimeout(() => {
@@ -159,18 +165,21 @@ export function RecordingDashboard({ isOpen, onClose, onFinish }: RecordingDashb
     const line = turf.lineString(path.map((p) => [p[1], p[0]]));
     const buffered = turf.buffer(line, 0.01, { units: 'kilometers' });
     const area = Math.round(turf.area(buffered as any));
+    const pace = distance > 0 ? (seconds / 60) / distance : 0;
 
-    setLastStats({ area, distance, duration: seconds });
+    setLastStats({ area, distance, duration: seconds, pace });
+    
+    // Create closed polygon from buffered area
+    const coords = (buffered as any).geometry.coordinates[0];
+    const closedPath = coords.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]);
+    
+    setLastPath(closedPath);
     setVictoryZoom(true);
     
     setTimeout(() => {
       setShowVictory(true);
       setIsRecording(false);
     }, 800);
-
-    // Create closed polygon from buffered area
-    const coords = (buffered as any).geometry.coordinates[0];
-    const closedPath = coords.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]);
 
     onFinish({
       path: closedPath,
@@ -472,7 +481,17 @@ export function RecordingDashboard({ isOpen, onClose, onFinish }: RecordingDashb
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
+                className="space-y-3"
               >
+                <Button
+                  onClick={() => setShowSnapshot(true)}
+                  size="lg"
+                  variant="secondary"
+                  className="w-full py-5 rounded-2xl font-bold uppercase tracking-wider border border-primary/30"
+                >
+                  <Share2 className="w-5 h-5 mr-2" />
+                  Gerar Story
+                </Button>
                 <Button
                   onClick={handleCloseVictory}
                   size="lg"
@@ -483,6 +502,19 @@ export function RecordingDashboard({ isOpen, onClose, onFinish }: RecordingDashb
               </motion.div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ZONNA Snapshot for Story Generation */}
+      <AnimatePresence>
+        {showSnapshot && (
+          <ZonnaSnapshot
+            isOpen={showSnapshot}
+            onClose={() => setShowSnapshot(false)}
+            conquestNumber={conquestCount + 1}
+            stats={lastStats}
+            path={lastPath}
+          />
         )}
       </AnimatePresence>
     </motion.div>
