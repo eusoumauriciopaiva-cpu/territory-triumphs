@@ -35,19 +35,21 @@ export function AdminGlobalMap({
   const map = useRef<maplibregl.Map | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Initialize map
+  // Initialize map in 2D mode (flat, no tilt)
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    // Start with world view centered on Brazil
+    // Start with world view centered on Brazil - 2D flat
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: getMapStyleUrl(mapStyle),
       center: [-46.6333, -23.5505],
       zoom: 3,
-      pitch: 45,
+      pitch: 0, // Flat 2D view
       bearing: 0,
       antialias: true,
+      maxPitch: 0, // Lock pitch to prevent tilting
+      pitchWithRotate: false, // Disable pitch with rotate gesture
     });
 
     map.current.on('load', () => {
@@ -57,6 +59,9 @@ export function AdminGlobalMap({
       if (needsStandardOverrides(mapStyle)) {
         applyStandardStyleOverrides(map.current);
       }
+
+      // Disable touch pitch gesture
+      map.current.touchPitch.disable();
 
       // Add global heatmap source
       map.current.addSource('global-conquests', {

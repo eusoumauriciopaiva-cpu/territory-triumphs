@@ -23,39 +23,9 @@ interface ZonnaMap3DProps {
   mapStyle?: MapStyleType;
 }
 
-// Helper function to setup map layers
-function setupMapLayers(mapInstance: maplibregl.Map, trailColor: string, styleType: MapStyleType) {
-  // Add 3D buildings layer (only works with vector tile sources)
-  try {
-    const layers = mapInstance.getStyle().layers;
-    const labelLayerId = layers?.find(
-      (layer) => layer.type === 'symbol' && layer.layout?.['text-field']
-    )?.id;
-
-    // Check if source exists before adding layer
-    if (mapInstance.getSource('carto')) {
-      mapInstance.addLayer(
-        {
-          id: '3d-buildings',
-          source: 'carto',
-          'source-layer': 'building',
-          type: 'fill-extrusion',
-          minzoom: 14,
-          paint: {
-            'fill-extrusion-color': styleType === 'satellite' ? '#333333' : '#252525',
-            'fill-extrusion-height': ['get', 'render_height'],
-            'fill-extrusion-base': ['get', 'render_min_height'],
-            'fill-extrusion-opacity': 0.8,
-          },
-        },
-        labelLayerId
-      );
-    }
-  } catch (e) {
-    console.log('3D buildings not available for this map style');
-  }
-
-  // Add neon trail source
+// Helper function to setup map layers (2D flat view - no 3D buildings)
+function setupMapLayers(mapInstance: maplibregl.Map, trailColor: string) {
+  // Add neon trail source (flat on map)
   mapInstance.addSource('recording-path', {
     type: 'geojson',
     data: { type: 'FeatureCollection', features: [] },
@@ -183,7 +153,7 @@ export function ZonnaMap3D({
   const [loaded, setLoaded] = useState(false);
   const currentStyleRef = useRef<MapStyleType>(mapStyle);
 
-  // Initialize map
+  // Initialize map in 2D mode (flat, no tilt)
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
@@ -194,21 +164,26 @@ export function ZonnaMap3D({
       style: getMapStyleUrl(mapStyle),
       center: [initialCenter[1], initialCenter[0]],
       zoom: 16,
-      pitch: 60,
+      pitch: 0, // Flat 2D view - no tilt
       bearing: 0,
       antialias: true,
+      maxPitch: 0, // Lock pitch to prevent tilting
+      pitchWithRotate: false, // Disable pitch with rotate gesture
     });
 
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // Apply Standard style overrides (Google Maps-like) - only for standard mode
+      // Apply Standard style overrides (Google Maps-like)
       if (needsStandardOverrides(mapStyle)) {
         applyStandardStyleOverrides(map.current);
       }
 
-      // Setup all map layers using helper function
-      setupMapLayers(map.current, trailColor, mapStyle);
+      // Disable touch pitch gesture
+      map.current.touchPitch.disable();
+
+      // Setup all map layers using helper function (2D flat)
+      setupMapLayers(map.current, trailColor);
 
       setLoaded(true);
     });
@@ -231,7 +206,6 @@ export function ZonnaMap3D({
 
     const currentCenter = map.current.getCenter();
     const currentZoom = map.current.getZoom();
-    const currentPitch = map.current.getPitch();
     const currentBearing = map.current.getBearing();
 
     // Store current path data
@@ -254,10 +228,10 @@ export function ZonnaMap3D({
     map.current.once('style.load', () => {
       if (!map.current) return;
 
-      // Restore camera position
+      // Restore camera position (keep 2D flat)
       map.current.setCenter(currentCenter);
       map.current.setZoom(currentZoom);
-      map.current.setPitch(currentPitch);
+      map.current.setPitch(0); // Always flat
       map.current.setBearing(currentBearing);
 
       // Apply overrides for standard mode
@@ -265,8 +239,11 @@ export function ZonnaMap3D({
         applyStandardStyleOverrides(map.current);
       }
 
-      // Re-add sources and layers
-      setupMapLayers(map.current, trailColor, mapStyle);
+      // Disable touch pitch
+      map.current.touchPitch.disable();
+
+      // Re-add sources and layers (2D flat)
+      setupMapLayers(map.current, trailColor);
 
       // Restore path data
       if (pathData) {
@@ -305,17 +282,17 @@ export function ZonnaMap3D({
       .addTo(map.current);
   }, [userPosition, loaded, mapStyle]);
 
-  // Smooth camera follow with rotation - like GPS navigation
+  // Smooth camera follow (2D - no rotation, just center tracking)
   useEffect(() => {
     if (!map.current || !loaded || !userPosition || !followUser) return;
 
     map.current.easeTo({
       center: [userPosition[1], userPosition[0]],
-      bearing: userBearing, // Rotate map to face direction of travel
+      bearing: 0, // Keep north up in 2D mode
       duration: 1000,
       easing: (t) => t * (2 - t), // Smooth easeOut
     });
-  }, [userPosition, userBearing, followUser, loaded]);
+  }, [userPosition, followUser, loaded]);
 
   // Update recording path
   useEffect(() => {
@@ -405,13 +382,13 @@ export function ZonnaMap3D({
     source.setData({ type: 'FeatureCollection', features });
   }, [userConquests, heatmapMode, loaded]);
 
-  // Victory zoom out effect
+  // Victory zoom out effect (2D - no pitch change)
   useEffect(() => {
     if (!map.current || !loaded || !onVictoryZoom) return;
 
     map.current.easeTo({
       zoom: 14,
-      pitch: 45,
+      pitch: 0, // Stay flat
       duration: 1500,
       easing: (t) => 1 - Math.pow(1 - t, 3),
     });
