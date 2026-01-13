@@ -333,16 +333,16 @@ export function ProfileScreen({
         </div>
       )}
 
-      {/* Admin Command Center - Only visible to admin */}
-      {isAdmin && (
+      {/* Admin Command Center - Only visible to master admin (eusoumauriciopaiva1@gmail.com) */}
+      {isAdmin === true && (
         <div className="mt-4">
           <Button 
             variant="outline" 
             onClick={() => navigate('/admin')}
-            className="w-full border-primary/50 text-primary hover:bg-primary/10 font-mono"
+            className="w-full border-primary/50 bg-primary/5 text-primary hover:bg-primary/10 font-mono uppercase tracking-wider"
           >
             <Shield className="w-4 h-4 mr-2" />
-            COMANDO ZONNA
+            PAINEL DE CONTROLE ZONNA
           </Button>
         </div>
       )}
