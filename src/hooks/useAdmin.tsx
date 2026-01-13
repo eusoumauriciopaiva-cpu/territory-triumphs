@@ -148,6 +148,10 @@ export function useAdminGroups() {
           name,
           total_area,
           is_elite,
+          city,
+          country,
+          monthly_km,
+          created_by,
           group_members (
             user_id
           )

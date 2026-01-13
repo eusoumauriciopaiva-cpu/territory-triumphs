@@ -13,7 +13,9 @@ import {
   Filter,
   Globe,
   Flame,
-  MapPin
+  MapPin,
+  Crown,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -25,7 +27,7 @@ import { AdminGlobalMap } from '@/components/AdminGlobalMap';
 import { MapStyleToggle } from '@/components/MapStyleToggle';
 import type { MapStyleType } from '@/lib/mapStyle';
 
-type TabType = 'map' | 'users';
+type TabType = 'map' | 'users' | 'clans';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -137,6 +139,15 @@ export default function AdminDashboard() {
             >
               <Users className="w-4 h-4" />
               ATLETAS
+            </Button>
+            <Button
+              variant={activeTab === 'clans' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setActiveTab('clans')}
+              className="gap-2 font-mono"
+            >
+              <Crown className="w-4 h-4" />
+              CLÃS
             </Button>
           </div>
         </div>
@@ -343,6 +354,110 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'clans' && (
+            <motion.div
+              key="clans"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {/* Clans Management */}
+              <div className="bg-card rounded-xl border border-primary/20 overflow-hidden">
+                <div className="p-4 border-b border-primary/20">
+                  <h2 className="font-bold flex items-center gap-2 font-mono">
+                    <Crown className="w-4 h-4 text-primary" />
+                    CLÃS REGISTRADOS ({groups?.length || 0})
+                  </h2>
+                </div>
+
+                {!groups || groups.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Crown className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm font-mono">
+                      NENHUM CLÃ CRIADO
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-primary/10">
+                    {groups.map((group) => {
+                      // Find leader profile
+                      const leaderProfile = profiles?.find(p => p.user_id === group.created_by);
+                      
+                      return (
+                        <div 
+                          key={group.id} 
+                          className="p-4 hover:bg-primary/5 transition-colors"
+                        >
+                          <div className="flex items-start gap-4">
+                            {/* Clan Icon */}
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                              group.is_elite 
+                                ? 'bg-gradient-to-br from-yellow-500 to-amber-600' 
+                                : 'bg-primary/20'
+                            }`}>
+                              {group.is_elite ? (
+                                <Zap className="w-6 h-6 text-black" />
+                              ) : (
+                                <Crown className="w-5 h-5 text-primary" />
+                              )}
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold font-mono">{group.name}</span>
+                                {group.is_elite && (
+                                  <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full font-mono font-bold">
+                                    CLÃ DE ELITE
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Location */}
+                              {(group.city || group.country) && (
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="font-mono text-xs">
+                                    {group.city && group.city}
+                                    {group.city && group.country && ', '}
+                                    {group.country}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Leader */}
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 font-mono">
+                                <Shield className="w-3 h-3 text-primary" />
+                                <span className="text-primary">Líder:</span>
+                                <span>
+                                  {leaderProfile?.nickname 
+                                    ? `@${leaderProfile.nickname}` 
+                                    : leaderProfile?.name || 'Desconhecido'}
+                                </span>
+                              </div>
+
+                              {/* Stats */}
+                              <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap font-mono">
+                                <span className="flex items-center gap-1">
+                                  <Users className="w-3 h-3" />
+                                  {group.group_members?.length || 0} membros
+                                </span>
+                                <span className="text-primary font-bold">
+                                  {group.total_area.toLocaleString()} m²
+                                </span>
+                                <span>{Number(group.monthly_km).toFixed(1)} km/mês</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

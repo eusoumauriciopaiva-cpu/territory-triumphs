@@ -338,7 +338,7 @@ export function ProfileScreen({
         <div className="mt-4">
           <Button 
             variant="outline" 
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/dev')}
             className="w-full border-primary/50 bg-primary/5 text-primary hover:bg-primary/10 font-mono uppercase tracking-wider"
           >
             <Shield className="w-4 h-4 mr-2" />
