@@ -27,7 +27,9 @@ export function useProfile() {
           current_streak: data.current_streak ?? 0,
           best_streak: data.best_streak ?? 0,
           last_activity_date: data.last_activity_date ?? null,
-        } as Profile;
+          trail_color: (data as any).trail_color ?? '#FF4F00',
+          unlocked_colors: (data as any).unlocked_colors ?? ['#FF4F00'],
+        } as Profile & { trail_color: string; unlocked_colors: string[] };
       }
       return null;
     },
@@ -35,12 +37,12 @@ export function useProfile() {
   });
 
   const updateProfile = useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
+    mutationFn: async (updates: Partial<Profile & { trail_color?: string }>) => {
       if (!user) throw new Error('Not authenticated');
       
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updates as any)
         .eq('user_id', user.id);
       
       if (error) throw error;

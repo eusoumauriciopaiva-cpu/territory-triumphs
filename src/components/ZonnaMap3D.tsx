@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Conquest } from '@/types';
@@ -12,9 +12,9 @@ interface ZonnaMap3DProps {
   onVictoryZoom?: boolean;
   heatmapMode?: boolean;
   userConquests?: Conquest[];
+  trailColor?: string;
 }
 
-const MAPTILER_KEY = 'get_your_own_key';
 const DARK_STYLE = `https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json`;
 
 export function ZonnaMap3D({
@@ -26,10 +26,12 @@ export function ZonnaMap3D({
   onVictoryZoom = false,
   heatmapMode = false,
   userConquests = [],
+  trailColor = '#FF4F00',
 }: ZonnaMap3DProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
-  const markerRef = useRef<maplibregl.Marker | null>(null);
+  const markerRef = useRef<HTMLDivElement | null>(null);
+  const markerObjRef = useRef<maplibregl.Marker | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   // Initialize map
@@ -192,17 +194,24 @@ export function ZonnaMap3D({
     };
   }, []);
 
-  // Update user marker
+  // Update user marker with pulse effect
   useEffect(() => {
     if (!map.current || !loaded || !userPosition) return;
 
-    if (markerRef.current) {
-      markerRef.current.setLngLat([userPosition[1], userPosition[0]]);
+    if (markerObjRef.current) {
+      markerObjRef.current.setLngLat([userPosition[1], userPosition[0]]);
     } else {
+      // Create custom marker element with pulse
       const el = document.createElement('div');
-      el.className = 'zonna-marker';
+      el.className = 'zonna-position-marker';
+      el.innerHTML = `
+        <div class="zonna-pulse-ring"></div>
+        <div class="zonna-pulse-ring zonna-pulse-ring-2"></div>
+        <div class="zonna-marker-core"></div>
+      `;
       
-      markerRef.current = new maplibregl.Marker({ element: el })
+      markerRef.current = el;
+      markerObjRef.current = new maplibregl.Marker({ element: el })
         .setLngLat([userPosition[1], userPosition[0]])
         .addTo(map.current);
     }
@@ -235,6 +244,29 @@ export function ZonnaMap3D({
       source.setData({ type: 'FeatureCollection', features: [] });
     }
   }, [recordingPath, loaded]);
+
+  // Update trail color dynamically
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+
+    // Update glow layer color
+    if (map.current.getLayer('recording-path-glow')) {
+      map.current.setPaintProperty('recording-path-glow', 'line-color', trailColor);
+    }
+    
+    // Update main line color
+    if (map.current.getLayer('recording-path-line')) {
+      map.current.setPaintProperty('recording-path-line', 'line-color', trailColor);
+    }
+
+    // Update conquest fill and outline colors
+    if (map.current.getLayer('conquests-fill')) {
+      map.current.setPaintProperty('conquests-fill', 'fill-color', trailColor);
+    }
+    if (map.current.getLayer('conquests-outline')) {
+      map.current.setPaintProperty('conquests-outline', 'line-color', trailColor);
+    }
+  }, [trailColor, loaded]);
 
   // Update conquests
   useEffect(() => {

@@ -3,15 +3,15 @@ import { Edit2, Trophy, LogOut, Flame, MapPin, Target } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { EloBadge, XPProgressBar, StreakBadge, EloCard } from './EloSystem';
+import { EloBadge, XPProgressBar, StreakBadge } from './EloSystem';
 import { ZonnaMap3D } from './ZonnaMap3D';
+import { TrailColorSelector } from './TrailColorSelector';
 import type { Profile, Conquest } from '@/types';
 import { RANK_CONFIG } from '@/types';
-
 interface ProfileScreenProps {
   profile: Profile | null;
   history: Conquest[];
-  onUpdateProfile: (updates: Partial<Profile>) => void;
+  onUpdateProfile: (updates: Partial<Profile & { trail_color?: string }>) => void;
   onShowOnMap: (conquest: Conquest) => void;
   onSignOut: () => void;
 }
@@ -144,10 +144,21 @@ export function ProfileScreen({
           <ZonnaMap3D
             userPosition={history.length > 0 ? history[0].path[0] : null}
             heatmapMode={true}
+            trailColor={(profile as any)?.trail_color || '#FF4F00'}
             userConquests={history}
           />
         </div>
       )}
+
+      {/* Trail Color Selector */}
+      <div className="mb-6">
+        <TrailColorSelector
+          profile={profile}
+          currentColor={(profile as any)?.trail_color || '#FF4F00'}
+          unlockedColors={(profile as any)?.unlocked_colors || ['#FF4F00']}
+          onSelectColor={(color) => onUpdateProfile({ trail_color: color } as any)}
+        />
+      </div>
 
       {/* History */}
       <div className="mb-6">
