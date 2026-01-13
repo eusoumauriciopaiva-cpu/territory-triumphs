@@ -2,7 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Conquest } from '@/types';
-import { CARTO_DARK_STYLE, applyZonnaStyleOverrides } from '@/lib/mapStyle';
+import { 
+  getMapStyleUrl, 
+  applyZonnaStyleOverrides, 
+  needsZonnaOverrides,
+  type MapStyleType 
+} from '@/lib/mapStyle';
 
 interface ZonnaMap3DProps {
   userPosition: [number, number] | null;
@@ -14,6 +19,147 @@ interface ZonnaMap3DProps {
   heatmapMode?: boolean;
   userConquests?: Conquest[];
   trailColor?: string;
+  mapStyle?: MapStyleType;
+}
+
+// Helper function to setup map layers
+function setupMapLayers(mapInstance: maplibregl.Map, trailColor: string, styleType: MapStyleType) {
+  // Add 3D buildings layer (only works with vector tile sources)
+  try {
+    const layers = mapInstance.getStyle().layers;
+    const labelLayerId = layers?.find(
+      (layer) => layer.type === 'symbol' && layer.layout?.['text-field']
+    )?.id;
+
+    // Check if source exists before adding layer
+    if (mapInstance.getSource('carto')) {
+      mapInstance.addLayer(
+        {
+          id: '3d-buildings',
+          source: 'carto',
+          'source-layer': 'building',
+          type: 'fill-extrusion',
+          minzoom: 14,
+          paint: {
+            'fill-extrusion-color': styleType === 'satellite' ? '#333333' : '#252525',
+            'fill-extrusion-height': ['get', 'render_height'],
+            'fill-extrusion-base': ['get', 'render_min_height'],
+            'fill-extrusion-opacity': 0.8,
+          },
+        },
+        labelLayerId
+      );
+    }
+  } catch (e) {
+    console.log('3D buildings not available for this map style');
+  }
+
+  // Add neon trail source
+  mapInstance.addSource('recording-path', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  // Glow layer (wider, more transparent)
+  mapInstance.addLayer({
+    id: 'recording-path-glow',
+    type: 'line',
+    source: 'recording-path',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round',
+    },
+    paint: {
+      'line-color': trailColor,
+      'line-width': 12,
+      'line-opacity': 0.4,
+      'line-blur': 8,
+    },
+  });
+
+  // Main neon line
+  mapInstance.addLayer({
+    id: 'recording-path-line',
+    type: 'line',
+    source: 'recording-path',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round',
+    },
+    paint: {
+      'line-color': trailColor,
+      'line-width': 4,
+      'line-opacity': 1,
+    },
+  });
+
+  // Core bright line
+  mapInstance.addLayer({
+    id: 'recording-path-core',
+    type: 'line',
+    source: 'recording-path',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round',
+    },
+    paint: {
+      'line-color': '#FFFFFF',
+      'line-width': 1.5,
+      'line-opacity': 0.8,
+    },
+  });
+
+  // Add conquests source
+  mapInstance.addSource('conquests', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  // Conquest fill
+  mapInstance.addLayer({
+    id: 'conquests-fill',
+    type: 'fill',
+    source: 'conquests',
+    paint: {
+      'fill-color': trailColor,
+      'fill-opacity': 0.2,
+    },
+  });
+
+  // Conquest outline
+  mapInstance.addLayer({
+    id: 'conquests-outline',
+    type: 'line',
+    source: 'conquests',
+    paint: {
+      'line-color': trailColor,
+      'line-width': 2,
+      'line-opacity': 0.8,
+    },
+  });
+
+  // Heatmap source for profile view
+  mapInstance.addSource('heatmap', {
+    type: 'geojson',
+    data: { type: 'FeatureCollection', features: [] },
+  });
+
+  mapInstance.addLayer({
+    id: 'heatmap-fill',
+    type: 'fill',
+    source: 'heatmap',
+    paint: {
+      'fill-color': [
+        'interpolate',
+        ['linear'],
+        ['get', 'intensity'],
+        0, 'rgba(255, 69, 0, 0.1)',
+        0.5, 'rgba(255, 69, 0, 0.4)',
+        1, 'rgba(255, 69, 0, 0.7)',
+      ],
+      'fill-opacity': 0.8,
+    },
+  });
 }
 
 export function ZonnaMap3D({
@@ -26,12 +172,14 @@ export function ZonnaMap3D({
   heatmapMode = false,
   userConquests = [],
   trailColor = '#FF4F00',
+  mapStyle = 'dark',
 }: ZonnaMap3DProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<HTMLDivElement | null>(null);
   const markerObjRef = useRef<maplibregl.Marker | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const currentStyleRef = useRef<MapStyleType>(mapStyle);
 
   // Initialize map
   useEffect(() => {
@@ -41,7 +189,7 @@ export function ZonnaMap3D({
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: CARTO_DARK_STYLE,
+      style: getMapStyleUrl(mapStyle),
       center: [initialCenter[1], initialCenter[0]],
       zoom: 16,
       pitch: 60,
@@ -52,138 +200,13 @@ export function ZonnaMap3D({
     map.current.on('load', () => {
       if (!map.current) return;
 
-      // Apply ZONNA High-Contrast Dark style overrides (Strava-inspired)
-      applyZonnaStyleOverrides(map.current);
+      // Apply ZONNA High-Contrast Dark style overrides (Strava-inspired) - only for dark mode
+      if (needsZonnaOverrides(mapStyle)) {
+        applyZonnaStyleOverrides(map.current);
+      }
 
-      // Add 3D buildings layer
-      const layers = map.current.getStyle().layers;
-      const labelLayerId = layers?.find(
-        (layer) => layer.type === 'symbol' && layer.layout?.['text-field']
-      )?.id;
-
-      map.current.addLayer(
-        {
-          id: '3d-buildings',
-          source: 'carto',
-          'source-layer': 'building',
-          type: 'fill-extrusion',
-          minzoom: 14,
-          paint: {
-            'fill-extrusion-color': '#252525',
-            'fill-extrusion-height': ['get', 'render_height'],
-            'fill-extrusion-base': ['get', 'render_min_height'],
-            'fill-extrusion-opacity': 0.8,
-          },
-        },
-        labelLayerId
-      );
-
-      // Add neon trail source
-      map.current.addSource('recording-path', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-
-      // Glow layer (wider, more transparent)
-      map.current.addLayer({
-        id: 'recording-path-glow',
-        type: 'line',
-        source: 'recording-path',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': '#FF4500',
-          'line-width': 12,
-          'line-opacity': 0.3,
-          'line-blur': 8,
-        },
-      });
-
-      // Main neon line
-      map.current.addLayer({
-        id: 'recording-path-line',
-        type: 'line',
-        source: 'recording-path',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': '#FF4500',
-          'line-width': 4,
-          'line-opacity': 1,
-        },
-      });
-
-      // Core bright line
-      map.current.addLayer({
-        id: 'recording-path-core',
-        type: 'line',
-        source: 'recording-path',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': '#FFFFFF',
-          'line-width': 1.5,
-          'line-opacity': 0.8,
-        },
-      });
-
-      // Add conquests source
-      map.current.addSource('conquests', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-
-      // Conquest fill
-      map.current.addLayer({
-        id: 'conquests-fill',
-        type: 'fill',
-        source: 'conquests',
-        paint: {
-          'fill-color': '#FF4500',
-          'fill-opacity': 0.2,
-        },
-      });
-
-      // Conquest outline
-      map.current.addLayer({
-        id: 'conquests-outline',
-        type: 'line',
-        source: 'conquests',
-        paint: {
-          'line-color': '#FF4500',
-          'line-width': 2,
-          'line-opacity': 0.8,
-        },
-      });
-
-      // Heatmap source for profile view
-      map.current.addSource('heatmap', {
-        type: 'geojson',
-        data: { type: 'FeatureCollection', features: [] },
-      });
-
-      map.current.addLayer({
-        id: 'heatmap-fill',
-        type: 'fill',
-        source: 'heatmap',
-        paint: {
-          'fill-color': [
-            'interpolate',
-            ['linear'],
-            ['get', 'intensity'],
-            0, 'rgba(255, 69, 0, 0.1)',
-            0.5, 'rgba(255, 69, 0, 0.4)',
-            1, 'rgba(255, 69, 0, 0.7)',
-          ],
-          'fill-opacity': 0.8,
-        },
-      });
+      // Setup all map layers using helper function
+      setupMapLayers(map.current, trailColor, mapStyle);
 
       setLoaded(true);
     });
@@ -194,7 +217,62 @@ export function ZonnaMap3D({
         map.current = null;
       }
     };
-  }, []);
+  }, [mapStyle]);
+
+  // Handle style changes dynamically
+  useEffect(() => {
+    if (!map.current || !loaded) return;
+    
+    // Only update if style actually changed
+    if (currentStyleRef.current === mapStyle) return;
+    currentStyleRef.current = mapStyle;
+
+    const currentCenter = map.current.getCenter();
+    const currentZoom = map.current.getZoom();
+    const currentPitch = map.current.getPitch();
+    const currentBearing = map.current.getBearing();
+
+    // Store current path data
+    const pathSource = map.current.getSource('recording-path') as maplibregl.GeoJSONSource;
+    let pathData: GeoJSON.GeoJSON | null = null;
+    if (pathSource && recordingPath.length > 1) {
+      pathData = {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: recordingPath.map(([lat, lng]) => [lng, lat]),
+        },
+      } as GeoJSON.Feature;
+    }
+
+    // Set new style
+    map.current.setStyle(getMapStyleUrl(mapStyle));
+
+    map.current.once('style.load', () => {
+      if (!map.current) return;
+
+      // Restore camera position
+      map.current.setCenter(currentCenter);
+      map.current.setZoom(currentZoom);
+      map.current.setPitch(currentPitch);
+      map.current.setBearing(currentBearing);
+
+      // Apply overrides for dark mode
+      if (needsZonnaOverrides(mapStyle)) {
+        applyZonnaStyleOverrides(map.current);
+      }
+
+      // Re-add sources and layers
+      setupMapLayers(map.current, trailColor, mapStyle);
+
+      // Restore path data
+      if (pathData) {
+        const source = map.current.getSource('recording-path') as maplibregl.GeoJSONSource;
+        if (source) source.setData(pathData);
+      }
+    });
+  }, [mapStyle, loaded, recordingPath, trailColor]);
 
   // Update user marker with pulse effect
   useEffect(() => {

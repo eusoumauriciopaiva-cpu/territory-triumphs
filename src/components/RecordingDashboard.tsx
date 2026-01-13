@@ -6,9 +6,11 @@ import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaSnapshot } from './ZonnaSnapshot';
 import { TrackingNotificationBar } from './TrackingNotificationBar';
 import { DominateButton } from './DominateButton';
+import { MapStyleToggle } from './MapStyleToggle';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
 import type { RecordMode } from '@/types';
+import type { MapStyleType } from '@/lib/mapStyle';
 
 interface RecordingDashboardProps {
   isOpen: boolean;
@@ -41,6 +43,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
   const [lastStats, setLastStats] = useState({ area: 0, distance: 0, duration: 0, pace: 0 });
   const [showSnapshot, setShowSnapshot] = useState(false);
   const [lastPath, setLastPath] = useState<[number, number][]>([]);
+  const [mapStyle, setMapStyle] = useState<MapStyleType>('dark');
 
   const watchId = useRef<number | null>(null);
 
@@ -240,6 +243,15 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
           recordingPath={path}
           onVictoryZoom={victoryZoom}
           trailColor={trailColor}
+          mapStyle={mapStyle}
+        />
+      </div>
+
+      {/* Map Style Toggle - Floating */}
+      <div className="absolute top-20 right-4 z-20">
+        <MapStyleToggle
+          currentStyle={mapStyle}
+          onStyleChange={setMapStyle}
         />
       </div>
 
