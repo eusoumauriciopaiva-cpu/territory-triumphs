@@ -8,7 +8,7 @@ export type AppRank =
   | 'grandmaster' 
   | 'emperor';
 
-export type RecordMode = 'livre' | 'dominio';
+export type RecordMode = 'dominio';
 
 export interface Profile {
   id: string;
