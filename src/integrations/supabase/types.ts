@@ -429,6 +429,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_missions_daily: {
+        Row: {
+          collected: boolean
+          created_at: string
+          id: string
+          mission_date: string
+          mission_type: string
+          progress: number
+          target: number
+          updated_at: string
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          collected?: boolean
+          created_at?: string
+          id?: string
+          mission_date?: string
+          mission_type: string
+          progress?: number
+          target: number
+          updated_at?: string
+          user_id: string
+          xp_reward: number
+        }
+        Update: {
+          collected?: boolean
+          created_at?: string
+          id?: string
+          mission_date?: string
+          mission_type?: string
+          progress?: number
+          target?: number
+          updated_at?: string
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

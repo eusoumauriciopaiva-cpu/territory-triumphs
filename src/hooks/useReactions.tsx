@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { updateMissionProgress } from '@/lib/missionUtils';
 
 export type ReactionType = 'fire' | 'trophy' | 'angry';
 
@@ -48,7 +49,7 @@ export function useReactions(postId: string) {
   const userReactions = reactions.filter(r => r.user_id === user?.id);
 
   const toggleReaction = useMutation({
-    mutationFn: async (type: ReactionType) => {
+    mutationFn: async ({ type, postOwnerId }: { type: ReactionType; postOwnerId?: string }) => {
       if (!user) throw new Error('Must be logged in');
 
       const existing = userReactions.find(r => r.reaction_type === type);
@@ -65,11 +66,19 @@ export function useReactions(postId: string) {
           .from('reactions')
           .insert({ user_id: user.id, post_id: postId, reaction_type: type });
         if (error) throw error;
+
+        // Update mission progress for 'apoio' (react to 3 other users' conquests)
+        // Only count if reacting to someone else's post
+        if (postOwnerId && postOwnerId !== user.id) {
+          await updateMissionProgress(user.id, 'apoio', 1);
+        }
+
         return { action: 'added', type };
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reactions', postId] });
+      queryClient.invalidateQueries({ queryKey: ['daily-missions'] });
     },
   });
 

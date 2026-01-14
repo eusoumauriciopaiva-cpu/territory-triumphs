@@ -11,6 +11,7 @@ import { TrailColorSelector } from './TrailColorSelector';
 import { AvatarUpload } from './AvatarUpload';
 import { AdminCommandPanel } from './AdminCommandPanel';
 import { FollowersModal } from './FollowersModal';
+import { DailyMissions } from './DailyMissions';
 import { useNicknameValidation, validateNicknameFormat } from '@/hooks/useNicknameValidation';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import { useFollowStats } from '@/hooks/useFollows';
@@ -385,6 +386,9 @@ export function ProfileScreen({
           onViewProfile={() => {}} // Can't navigate to own profile from own profile
         />
       )}
+
+      {/* Daily Missions */}
+      <DailyMissions />
 
       {/* Sign Out - Always visible at bottom */}
       <div className="mt-4">

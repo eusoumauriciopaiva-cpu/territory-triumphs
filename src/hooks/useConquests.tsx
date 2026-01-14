@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { updateMissionProgress } from '@/lib/missionUtils';
 import type { Conquest, Profile } from '@/types';
 import * as turf from '@turf/turf';
 
@@ -132,6 +133,14 @@ export function useConquests() {
         console.error('Error detecting conflicts:', e);
         // Don't throw - conflict detection failure shouldn't block conquest
       }
+
+      // Update mission progress for 'conquistador' (conquer 1 area)
+      await updateMissionProgress(user.id, 'conquistador', 1);
+
+      // Update mission progress for 'resistencia' if distance >= 2km
+      if (conquest.distance >= 2) {
+        await updateMissionProgress(user.id, 'resistencia', 1);
+      }
       
       return data;
     },
@@ -140,6 +149,7 @@ export function useConquests() {
       queryClient.invalidateQueries({ queryKey: ['profile'] });
       queryClient.invalidateQueries({ queryKey: ['user-conflicts'] });
       queryClient.invalidateQueries({ queryKey: ['admin-conflicts'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-missions'] });
     },
   });
 
