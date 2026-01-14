@@ -192,7 +192,6 @@ export function GroupsScreen({
         isOpen={!!selectedProfile}
         onClose={() => setSelectedProfile(null)}
         profile={selectedProfile}
-        onChallenge={handleChallenge}
       />
     </div>
   );

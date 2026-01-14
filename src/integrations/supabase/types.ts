@@ -94,6 +94,8 @@ export type Database = {
       conquests: {
         Row: {
           area: number
+          center_latitude: number | null
+          center_longitude: number | null
           created_at: string
           distance: number
           duration: number | null
@@ -103,6 +105,8 @@ export type Database = {
         }
         Insert: {
           area: number
+          center_latitude?: number | null
+          center_longitude?: number | null
           created_at?: string
           distance: number
           duration?: number | null
@@ -112,12 +116,35 @@ export type Database = {
         }
         Update: {
           area?: number
+          center_latitude?: number | null
+          center_longitude?: number | null
           created_at?: string
           distance?: number
           duration?: number | null
           id?: string
           path?: Json
           user_id?: string
+        }
+        Relationships: []
+      }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
         }
         Relationships: []
       }
@@ -194,6 +221,8 @@ export type Database = {
           current_streak: number
           id: string
           last_activity_date: string | null
+          last_latitude: number | null
+          last_longitude: number | null
           level: number
           name: string
           nickname: string | null
@@ -214,6 +243,8 @@ export type Database = {
           current_streak?: number
           id?: string
           last_activity_date?: string | null
+          last_latitude?: number | null
+          last_longitude?: number | null
           level?: number
           name?: string
           nickname?: string | null
@@ -234,6 +265,8 @@ export type Database = {
           current_streak?: number
           id?: string
           last_activity_date?: string | null
+          last_latitude?: number | null
+          last_longitude?: number | null
           level?: number
           name?: string
           nickname?: string | null

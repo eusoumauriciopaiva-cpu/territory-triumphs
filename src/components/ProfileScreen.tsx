@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield } from 'lucide-react';
+import { Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield, Users } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -8,11 +8,14 @@ import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaCodex } from './ZonnaCodex';
 import { AvatarUpload } from './AvatarUpload';
 import { AdminCommandPanel } from './AdminCommandPanel';
+import { FollowersModal } from './FollowersModal';
 import { useNicknameValidation, validateNicknameFormat } from '@/hooks/useNicknameValidation';
 import { useIsAdmin } from '@/hooks/useAdmin';
+import { useFollowStats } from '@/hooks/useFollows';
 import type { Profile, Conquest } from '@/types';
 import { RANK_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
+
 interface ProfileScreenProps {
   profile: Profile | null;
   history: Conquest[];
@@ -33,9 +36,16 @@ export function ProfileScreen({
   const [nickname, setNickname] = useState(profile?.nickname || '');
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [activeSection, setActiveSection] = useState<'stats' | 'codex' | 'history' | 'admin'>('stats');
+  const [followersModal, setFollowersModal] = useState<{
+    isOpen: boolean;
+    type: 'followers' | 'following';
+  }>({ isOpen: false, type: 'followers' });
   
   // Check if user is admin
   const { data: isAdmin } = useIsAdmin();
+  
+  // Get follow stats
+  const { data: followStats } = useFollowStats(profile?.user_id || '');
 
   // Nickname validation
   const nicknameValidation = useNicknameValidation(nickname);
@@ -104,7 +114,25 @@ export function ProfileScreen({
           Nível {profile.level} • {RANK_CONFIG[profile.rank].label}
         </p>
 
-        <div className="flex items-center gap-3 mt-3">
+        {/* Followers/Following Stats */}
+        <div className="flex items-center gap-4 mt-3 mb-2">
+          <button
+            onClick={() => setFollowersModal({ isOpen: true, type: 'followers' })}
+            className="flex items-center gap-1 hover:text-primary transition-colors"
+          >
+            <span className="font-bold">{followStats?.followersCount || 0}</span>
+            <span className="text-muted-foreground text-sm">seguidores</span>
+          </button>
+          <button
+            onClick={() => setFollowersModal({ isOpen: true, type: 'following' })}
+            className="flex items-center gap-1 hover:text-primary transition-colors"
+          >
+            <span className="font-bold">{followStats?.followingCount || 0}</span>
+            <span className="text-muted-foreground text-sm">seguindo</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3">
           <StreakBadge streak={profile.current_streak || 0} bestStreak={profile.best_streak} />
           
           <Dialog open={isEditing} onOpenChange={setIsEditing}>
@@ -335,6 +363,17 @@ export function ProfileScreen({
       {/* Admin Command Panel - Inline for master admin */}
       {activeSection === 'admin' && isAdmin === true && (
         <AdminCommandPanel />
+      )}
+
+      {/* Followers Modal */}
+      {profile && (
+        <FollowersModal
+          isOpen={followersModal.isOpen}
+          onClose={() => setFollowersModal({ isOpen: false, type: 'followers' })}
+          userId={profile.user_id}
+          type={followersModal.type}
+          onViewProfile={() => {}} // Can't navigate to own profile from own profile
+        />
       )}
 
       {/* Sign Out - Always visible at bottom */}

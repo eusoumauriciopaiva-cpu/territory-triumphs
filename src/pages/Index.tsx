@@ -17,6 +17,7 @@ import { SplashScreen } from '@/components/SplashScreen';
 import { MapScanner } from '@/components/MapScanner';
 import { InvasionAlert, DuelPanel, checkInvasion } from '@/components/InvasionSystem';
 import { VisitableProfile } from '@/components/VisitableProfile';
+import { FollowersModal } from '@/components/FollowersModal';
 import { ClanSystem } from '@/components/ClanSystem';
 import { ClanProfile } from '@/components/ClanProfile';
 import { SyncOverlay } from '@/components/SyncOverlay';
@@ -68,6 +69,11 @@ function AppContent() {
 
   // Visitable profile state
   const [visitingProfile, setVisitingProfile] = useState<Profile | null>(null);
+  const [followersModal, setFollowersModal] = useState<{
+    isOpen: boolean;
+    userId: string;
+    type: 'followers' | 'following';
+  }>({ isOpen: false, userId: '', type: 'followers' });
 
   // Conquest registration modal state
   const [conquestRegistration, setConquestRegistration] = useState<{
@@ -186,19 +192,25 @@ function AppContent() {
     }
   };
 
-  const handleChallengeFromProfile = async () => {
+  const handleViewProfileFromFeed = (profile: Profile) => {
+    setVisitingProfile(profile);
+  };
+
+  const handleShowFollowers = () => {
     if (visitingProfile) {
-      try {
-        await createChallenge.mutateAsync(visitingProfile.user_id);
-        toast({
-          title: '⚔️ Desafio Enviado!',
-          description: `Você desafiou ${visitingProfile.name}!`,
-        });
-      } catch (error) {
-        console.error('Failed to create challenge:', error);
-      }
-      setVisitingProfile(null);
+      setFollowersModal({ isOpen: true, userId: visitingProfile.user_id, type: 'followers' });
     }
+  };
+
+  const handleShowFollowing = () => {
+    if (visitingProfile) {
+      setFollowersModal({ isOpen: true, userId: visitingProfile.user_id, type: 'following' });
+    }
+  };
+
+  const handleViewProfileFromFollowers = (profile: Profile) => {
+    setFollowersModal({ isOpen: false, userId: '', type: 'followers' });
+    setVisitingProfile(profile);
   };
 
   const handleJoinGroup = async (groupId: string) => {
@@ -283,9 +295,19 @@ function AppContent() {
           isOpen={!!visitingProfile}
           onClose={() => setVisitingProfile(null)}
           profile={visitingProfile}
-          onChallenge={handleChallengeFromProfile}
+          onShowFollowers={handleShowFollowers}
+          onShowFollowing={handleShowFollowing}
         />
       )}
+
+      {/* Followers Modal */}
+      <FollowersModal
+        isOpen={followersModal.isOpen}
+        onClose={() => setFollowersModal({ isOpen: false, userId: '', type: 'followers' })}
+        userId={followersModal.userId}
+        type={followersModal.type}
+        onViewProfile={handleViewProfileFromFollowers}
+      />
 
       {/* Clan Profile Modal */}
       <ClanProfile
@@ -306,7 +328,7 @@ function AppContent() {
             className="h-full w-full"
           >
             {activeTab === 'feed' && (
-              <FeedScreen />
+              <FeedScreen onViewProfile={handleViewProfileFromFeed} />
             )}
             {activeTab === 'map' && (
               <MapScreen 
