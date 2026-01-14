@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield, Users } from 'lucide-react';
+import { Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield, Users, Palette } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { ScrollArea } from './ui/scroll-area';
 import { EloBadge, XPProgressBar, StreakBadge } from './EloSystem';
 import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaCodex } from './ZonnaCodex';
+import { TrailColorSelector } from './TrailColorSelector';
 import { AvatarUpload } from './AvatarUpload';
 import { AdminCommandPanel } from './AdminCommandPanel';
 import { FollowersModal } from './FollowersModal';
@@ -142,84 +144,94 @@ export function ProfileScreen({
                 Editar
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass border-border">
+            <DialogContent className="glass border-border max-h-[85vh]">
               <DialogHeader>
                 <DialogTitle className="font-black">Editar Perfil</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                {/* Name field */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-muted-foreground">Nome</label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="bg-card border-border"
-                    placeholder="Seu nome"
-                  />
-                </div>
-
-                {/* Nickname field with real-time validation */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                    <AtSign className="w-3 h-3" />
-                    Nickname (opcional)
-                  </label>
-                  <div className="relative">
+              <ScrollArea className="max-h-[65vh] pr-4">
+                <div className="space-y-4">
+                  {/* Name field */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Nome</label>
                     <Input
-                      value={nickname}
-                      onChange={(e) => setNickname(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                      className={cn(
-                        "bg-card border-border pr-10",
-                        nicknameValidation.error && "border-destructive focus:border-destructive",
-                        nicknameValidation.isAvailable === true && nickname && "border-green-500 focus:border-green-500"
-                      )}
-                      placeholder="seu_nick"
-                      maxLength={20}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="bg-card border-border"
+                      placeholder="Seu nome"
                     />
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                      {nicknameValidation.isChecking && (
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                      )}
-                      {!nicknameValidation.isChecking && nicknameValidation.isAvailable === true && nickname && (
-                        <Check className="w-4 h-4 text-green-500" />
-                      )}
-                      {!nicknameValidation.isChecking && nicknameValidation.isAvailable === false && (
-                        <X className="w-4 h-4 text-destructive" />
-                      )}
+                  </div>
+
+                  {/* Nickname field with real-time validation */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                      <AtSign className="w-3 h-3" />
+                      Nickname (opcional)
+                    </label>
+                    <div className="relative">
+                      <Input
+                        value={nickname}
+                        onChange={(e) => setNickname(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                        className={cn(
+                          "bg-card border-border pr-10",
+                          nicknameValidation.error && "border-destructive focus:border-destructive",
+                          nicknameValidation.isAvailable === true && nickname && "border-green-500 focus:border-green-500"
+                        )}
+                        placeholder="seu_nick"
+                        maxLength={20}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {nicknameValidation.isChecking && (
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        )}
+                        {!nicknameValidation.isChecking && nicknameValidation.isAvailable === true && nickname && (
+                          <Check className="w-4 h-4 text-green-500" />
+                        )}
+                        {!nicknameValidation.isChecking && nicknameValidation.isAvailable === false && (
+                          <X className="w-4 h-4 text-destructive" />
+                        )}
+                      </div>
                     </div>
+                    {nicknameValidation.error && (
+                      <p className="text-xs text-destructive">{nicknameValidation.error}</p>
+                    )}
+                    {nicknameValidation.isAvailable && nickname && (
+                      <p className="text-xs text-green-500">Nick disponível!</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      Apenas letras, números e underscore. Ex: @comandante_zonna
+                    </p>
                   </div>
-                  {nicknameValidation.error && (
-                    <p className="text-xs text-destructive">{nicknameValidation.error}</p>
-                  )}
-                  {nicknameValidation.isAvailable && nickname && (
-                    <p className="text-xs text-green-500">Nick disponível!</p>
-                  )}
-                  <p className="text-[10px] text-muted-foreground">
-                    Apenas letras, números e underscore. Ex: @comandante_zonna
-                  </p>
-                </div>
 
-                {/* Z-ID (read-only) */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase text-muted-foreground">
-                    Código ZONNA (permanente)
-                  </label>
-                  <div className="bg-muted/50 px-3 py-2 rounded-md border border-border">
-                    <span className="font-mono text-primary font-bold">#{profile.unique_code}</span>
+                  {/* Z-ID (read-only) */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-muted-foreground">
+                      Código ZONNA (permanente)
+                    </label>
+                    <div className="bg-muted/50 px-3 py-2 rounded-md border border-border">
+                      <span className="font-mono text-primary font-bold">#{profile.unique_code}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Seu ID único para recrutamento. Compartilhe com amigos!
+                    </p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Seu ID único para recrutamento. Compartilhe com amigos!
-                  </p>
-                </div>
 
-                <Button 
-                  onClick={handleSave} 
-                  className="w-full bg-primary text-black font-bold"
-                  disabled={nickname ? !nicknameValidation.isAvailable || nicknameValidation.isChecking : false}
-                >
-                  Salvar
-                </Button>
-              </div>
+                  {/* Trail Color Selector */}
+                  <div className="pt-2">
+                    <TrailColorSelector
+                      currentColor={trailColor}
+                      onSelectColor={(color) => onUpdateProfile({ trail_color: color } as any)}
+                    />
+                  </div>
+
+                  <Button 
+                    onClick={handleSave} 
+                    className="w-full bg-primary text-black font-bold"
+                    disabled={nickname ? !nicknameValidation.isAvailable || nicknameValidation.isChecking : false}
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         </div>
@@ -308,8 +320,6 @@ export function ProfileScreen({
       {/* Codex Section */}
       {activeSection === 'codex' && (
         <ZonnaCodex
-          profile={{ ...profile, trail_color: trailColor, unlocked_colors: unlockedColors }}
-          conquests={history}
           currentColor={trailColor}
           onSelectColor={(color) => onUpdateProfile({ trail_color: color } as any)}
         />
