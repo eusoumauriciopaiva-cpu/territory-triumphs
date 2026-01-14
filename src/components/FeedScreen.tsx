@@ -3,6 +3,7 @@ import { Trophy, MapPin, Clock, Image as ImageIcon, Users, Navigation } from 'lu
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RankBadge } from './RankBadge';
+import { PostInteractions } from './PostInteractions';
 import { useConquestPosts, useFriendsFeed, useNearbyFeed, ConquestPost } from '@/hooks/useConquestPosts';
 import { Skeleton } from './ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -221,17 +222,14 @@ function ConquestPostCard({ post, onViewProfile }: ConquestPostCardProps) {
         </div>
       )}
 
-      {/* Stats Footer */}
-      <div className="px-4 py-3 border-t border-border bg-muted/20">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Histórico permanente</span>
-          {post.photo_urls.length > 0 && (
-            <span className="flex items-center gap-1">
-              <ImageIcon className="w-3 h-3" />
-              {post.photo_urls.length} foto{post.photo_urls.length > 1 ? 's' : ''}
-            </span>
-          )}
-        </div>
+      {/* Interactions */}
+      <div className="px-4 pb-4">
+        <PostInteractions 
+          postId={post.id}
+          postOwnerId={post.user_id}
+          locationName={post.title}
+          onViewProfile={onViewProfile}
+        />
       </div>
     </div>
   );
