@@ -89,15 +89,6 @@ function AppContent() {
   // Fetch opponent profile for invasion/duel
   const { data: invasionOwnerProfile } = usePublicProfile(invasionAlert.conquest?.user_id || null);
 
-  // Show pending challenges notification
-  useEffect(() => {
-    if (pendingChallenges.length > 0) {
-      toast({
-        title: '⚔️ Novo Desafio!',
-        description: `${pendingChallenges[0].challenger_profile?.name || 'Alguém'} te desafiou!`,
-      });
-    }
-  }, [pendingChallenges.length]);
 
   // Show splash screen only on first load
   useEffect(() => {
