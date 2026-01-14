@@ -1,8 +1,9 @@
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Swords, Trophy, MapPin, Flame } from 'lucide-react';
+import { X, Trophy, MapPin, Flame, UserPlus, UserMinus, Users, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { EloBadge, XPProgressBar, StreakBadge } from './EloSystem';
+import { useFollowStats, useFollow } from '@/hooks/useFollows';
+import { useAuth } from '@/hooks/useAuth';
 import type { Profile } from '@/types';
 import { RANK_CONFIG } from '@/types';
 
@@ -10,11 +11,27 @@ interface VisitableProfileProps {
   isOpen: boolean;
   onClose: () => void;
   profile: Profile | null;
-  onChallenge: () => void;
+  onShowFollowers?: () => void;
+  onShowFollowing?: () => void;
 }
 
-export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: VisitableProfileProps) {
+export function VisitableProfile({ isOpen, onClose, profile, onShowFollowers, onShowFollowing }: VisitableProfileProps) {
+  const { session } = useAuth();
+  const { data: stats, isLoading: loadingStats } = useFollowStats(profile?.user_id || '');
+  const { follow, unfollow, isFollowing, isUnfollowing } = useFollow();
+  
+  const isOwnProfile = session?.user?.id === profile?.user_id;
+  const isPending = isFollowing || isUnfollowing;
+
   if (!isOpen || !profile) return null;
+
+  const handleFollowToggle = () => {
+    if (stats?.isFollowing) {
+      unfollow(profile.user_id);
+    } else {
+      follow(profile.user_id);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -40,7 +57,7 @@ export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: Visi
 
           <div className="p-6 pb-8 safe-bottom">
             {/* Header */}
-            <div className="flex items-start justify-between mb-6">
+            <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
                 {/* Avatar with orange fallback */}
                 <div className="relative">
@@ -71,13 +88,31 @@ export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: Visi
                   <p className="text-sm text-muted-foreground mt-1">
                     Nível {profile.level} • {RANK_CONFIG[profile.rank].label}
                   </p>
-                  <StreakBadge streak={profile.current_streak} size="sm" />
                 </div>
               </div>
 
               <Button variant="ghost" size="icon" onClick={onClose}>
                 <X className="w-5 h-5" />
               </Button>
+            </div>
+
+            {/* Followers/Following Stats */}
+            <div className="flex items-center gap-4 mb-4">
+              <button
+                onClick={onShowFollowers}
+                className="flex items-center gap-1 hover:text-primary transition-colors"
+              >
+                <span className="font-bold">{stats?.followersCount || 0}</span>
+                <span className="text-muted-foreground text-sm">seguidores</span>
+              </button>
+              <button
+                onClick={onShowFollowing}
+                className="flex items-center gap-1 hover:text-primary transition-colors"
+              >
+                <span className="font-bold">{stats?.followingCount || 0}</span>
+                <span className="text-muted-foreground text-sm">seguindo</span>
+              </button>
+              <StreakBadge streak={profile.current_streak} size="sm" />
             </div>
 
             {/* XP Progress */}
@@ -112,15 +147,32 @@ export function VisitableProfile({ isOpen, onClose, profile, onChallenge }: Visi
               </div>
             </div>
 
-            {/* Challenge Button */}
-            <Button
-              size="lg"
-              onClick={onChallenge}
-              className="w-full bg-gradient-zonna text-primary-foreground font-black uppercase tracking-widest py-6 rounded-2xl glow-zonna-intense"
-            >
-              <Swords className="w-5 h-5 mr-2" />
-              Desafiar
-            </Button>
+            {/* Follow Button (only for other users) */}
+            {!isOwnProfile && (
+              <Button
+                size="lg"
+                onClick={handleFollowToggle}
+                disabled={isPending}
+                variant={stats?.isFollowing ? 'secondary' : 'default'}
+                className={`w-full font-black uppercase tracking-widest py-6 rounded-2xl ${
+                  !stats?.isFollowing ? 'bg-gradient-zonna text-primary-foreground glow-zonna-intense' : ''
+                }`}
+              >
+                {isPending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : stats?.isFollowing ? (
+                  <>
+                    <UserMinus className="w-5 h-5 mr-2" />
+                    Seguindo
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Seguir
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </motion.div>
       </motion.div>
