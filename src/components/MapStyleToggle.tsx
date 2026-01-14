@@ -20,16 +20,15 @@ export function MapStyleToggle({ currentStyle, onStyleChange, className }: MapSt
       size="icon"
       onClick={toggleStyle}
       className={cn(
-        "glass border border-border rounded-full w-12 h-12 transition-all shadow-lg",
-        currentStyle === 'satellite' && "bg-primary/20 border-primary/50",
+        "bg-black/90 hover:bg-black border border-white/20 rounded-full w-12 h-12 transition-all shadow-xl",
         className
       )}
       title={currentStyle === 'standard' ? 'Mudar para Satélite' : 'Mudar para Mapa'}
     >
       {currentStyle === 'standard' ? (
-        <Satellite className="w-5 h-5" />
+        <Satellite className="w-5 h-5 text-white" />
       ) : (
-        <Map className="w-5 h-5 text-primary" />
+        <Map className="w-5 h-5 text-white" />
       )}
     </Button>
   );
