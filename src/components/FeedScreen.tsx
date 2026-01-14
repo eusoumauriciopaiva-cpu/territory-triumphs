@@ -126,6 +126,7 @@ interface ConquestPostCardProps {
 
 function ConquestPostCard({ post, onViewProfile }: ConquestPostCardProps) {
   const profile = post.profile;
+  const userColor = (profile as any)?.trail_color || '#FF4500';
   const conquest = post.conquest;
 
   const handleProfileClick = () => {
@@ -197,16 +198,22 @@ function ConquestPostCard({ post, onViewProfile }: ConquestPostCardProps) {
 
       {/* Map Preview */}
       {conquest && (
-        <div className="mx-4 mb-3 rounded-xl overflow-hidden border border-border bg-muted/30 p-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+        <div 
+          className="mx-4 mb-3 rounded-xl overflow-hidden bg-muted/30 p-3"
+          style={{
+            border: `2px solid ${userColor}`,
+            boxShadow: `0 0 12px ${userColor}30`,
+          }}
+        >
+          <div className="flex items-center gap-2 text-xs mb-2" style={{ color: userColor }}>
             <MapPin className="w-3 h-3" />
-            <span>Território Conquistado</span>
+            <span className="font-bold">Território Conquistado</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex gap-4">
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase">Área</p>
-                <p className="font-mono-display font-bold text-primary">
+                <p className="font-mono-display font-bold" style={{ color: userColor }}>
                   {conquest.area.toLocaleString()} m²
                 </p>
               </div>
@@ -217,7 +224,7 @@ function ConquestPostCard({ post, onViewProfile }: ConquestPostCardProps) {
                 </p>
               </div>
             </div>
-            <Trophy className="w-8 h-8 text-primary/30" />
+            <Trophy className="w-8 h-8" style={{ color: `${userColor}40` }} />
           </div>
         </div>
       )}
