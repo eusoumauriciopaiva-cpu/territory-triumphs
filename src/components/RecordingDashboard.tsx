@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Play, Square, Trophy, MapPin, AlertCircle, Flame, Target, Share2 } from 'lucide-react';
+import { X, Play, Square, Trophy, MapPin, AlertCircle, Target, Share2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { ZonnaMap3D } from './ZonnaMap3D';
 import { ZonnaSnapshot } from './ZonnaSnapshot';
 import { TrackingNotificationBar } from './TrackingNotificationBar';
-import { DominateButton } from './DominateButton';
 import { MapStyleToggle } from './MapStyleToggle';
 import { cn } from '@/lib/utils';
 import * as turf from '@turf/turf';
-import type { RecordMode } from '@/types';
 import type { MapStyleType } from '@/lib/mapStyle';
 
 interface RecordingDashboardProps {
@@ -20,7 +18,7 @@ interface RecordingDashboardProps {
     area: number;
     distance: number;
     duration: number;
-    mode: RecordMode;
+    mode: 'dominio';
   }) => void;
   conquestCount: number;
   trailColor?: string;
@@ -28,14 +26,19 @@ interface RecordingDashboardProps {
 
 type GpsStatus = 'searching' | 'ok' | 'denied';
 
+// Distance threshold to close circuit (5 meters)
+const CLOSE_CIRCUIT_RADIUS = 5;
+// Minimum distance traveled before allowing close (100m)
+const MIN_DISTANCE_TO_CLOSE = 0.1;
+
 export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, trailColor = '#FF4F00' }: RecordingDashboardProps) {
-  const [mode, setMode] = useState<RecordMode>('livre');
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [path, setPath] = useState<[number, number][]>([]);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
   const [startPos, setStartPos] = useState<[number, number] | null>(null);
   const [distance, setDistance] = useState(0);
+  const [distanceToStart, setDistanceToStart] = useState<number | null>(null);
   const [canClose, setCanClose] = useState(false);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>('searching');
   const [showVictory, setShowVictory] = useState(false);
@@ -81,22 +84,22 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
                 const length = turf.length(line, { units: 'kilometers' });
                 setDistance(length);
 
-                // Check if can close polygon (>100m traveled and within 20m of start)
-                if (mode === 'dominio') {
-                  const distToStart = turf.distance(
-                    turf.point([newPos[1], newPos[0]]),
-                    turf.point([startPos[1], startPos[0]]),
-                    { units: 'meters' }
-                  );
+                // Calculate distance to start point
+                const distToStart = turf.distance(
+                  turf.point([newPos[1], newPos[0]]),
+                  turf.point([startPos[1], startPos[0]]),
+                  { units: 'meters' }
+                );
+                setDistanceToStart(Math.round(distToStart));
 
-                  if (length > 0.1 && distToStart < 25) {
-                    if (!canClose) {
-                      setCanClose(true);
-                      if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
-                    }
-                  } else {
-                    setCanClose(false);
+                // Check if can close polygon (>100m traveled and within 5m of start)
+                if (length > MIN_DISTANCE_TO_CLOSE && distToStart <= CLOSE_CIRCUIT_RADIUS) {
+                  if (!canClose) {
+                    setCanClose(true);
+                    if ('vibrate' in navigator) navigator.vibrate([100, 50, 100, 50, 100]);
                   }
+                } else {
+                  setCanClose(false);
                 }
               }
               
@@ -114,7 +117,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
     return () => {
       if (watchId.current) navigator.geolocation.clearWatch(watchId.current);
     };
-  }, [isOpen, isRecording, startPos, canClose, mode]);
+  }, [isOpen, isRecording, startPos, canClose]);
 
   // Timer
   useEffect(() => {
@@ -130,6 +133,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
     setSeconds(0);
     setPath(userPos ? [userPos] : []);
     setDistance(0);
+    setDistanceToStart(null);
     setStartPos(userPos);
     setCanClose(false);
   }, [userPos]);
@@ -140,6 +144,12 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
 
   const handleFinishDomain = useCallback(() => {
     if (path.length < 3) return;
+    
+    // Verify circuit is properly closed (within 5m of start)
+    if (!canClose) {
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      return;
+    }
 
     const polygonPath = [...path, path[0]];
     const turfPoly = turf.polygon([polygonPath.map((p) => [p[1], p[0]])]);
@@ -160,41 +170,9 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
       area,
       distance,
       duration: seconds,
-      mode,
+      mode: 'dominio',
     });
-  }, [path, distance, seconds, mode, onFinish]);
-
-  const handleFinishLivre = useCallback(() => {
-    // For ZONNA LIVRE mode, calculate area from path bounds
-    if (path.length < 2) return;
-
-    const line = turf.lineString(path.map((p) => [p[1], p[0]]));
-    const buffered = turf.buffer(line, 0.01, { units: 'kilometers' });
-    const area = Math.round(turf.area(buffered as any));
-    const pace = distance > 0 ? (seconds / 60) / distance : 0;
-
-    setLastStats({ area, distance, duration: seconds, pace });
-    
-    // Create closed polygon from buffered area
-    const coords = (buffered as any).geometry.coordinates[0];
-    const closedPath = coords.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]);
-    
-    setLastPath(closedPath);
-    setVictoryZoom(true);
-    
-    setTimeout(() => {
-      setShowVictory(true);
-      setIsRecording(false);
-    }, 800);
-
-    onFinish({
-      path: closedPath,
-      area,
-      distance,
-      duration: seconds,
-      mode,
-    });
-  }, [path, distance, seconds, mode, onFinish]);
+  }, [path, distance, seconds, canClose, onFinish]);
 
   const formatTime = (s: number) => {
     const hours = Math.floor(s / 3600);
@@ -209,13 +187,13 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
     setPath([]);
     setStartPos(null);
     setDistance(0);
+    setDistanceToStart(null);
     setSeconds(0);
     onClose();
   };
 
   // Calculate pace
   const pace = distance > 0 ? (seconds / 60) / distance : 0;
-  const canDominate = distance >= 0.5; // 500m minimum for dominate
 
   if (!isOpen) return null;
 
@@ -241,6 +219,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
           userPosition={userPos}
           followUser={isRecording}
           recordingPath={path}
+          startPosition={isRecording ? startPos : null}
           onVictoryZoom={victoryZoom}
           trailColor={trailColor}
           mapStyle={mapStyle}
@@ -280,33 +259,13 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
           </Button>
         </div>
 
-        {/* Mode Selector */}
+        {/* Mode Indicator - Always DOMÍNIO */}
         {!isRecording && (
           <div className="glass rounded-2xl p-1 border border-border flex">
-            <button
-              onClick={() => setMode('livre')}
-              className={cn(
-                "flex-1 py-3 px-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all",
-                mode === 'livre' 
-                  ? "bg-primary text-primary-foreground glow-zonna" 
-                  : "text-muted-foreground"
-              )}
-            >
-              <Flame className="w-4 h-4 inline mr-2" />
-              Zonna Livre
-            </button>
-            <button
-              onClick={() => setMode('dominio')}
-              className={cn(
-                "flex-1 py-3 px-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all",
-                mode === 'dominio' 
-                  ? "bg-primary text-primary-foreground glow-zonna" 
-                  : "text-muted-foreground"
-              )}
-            >
+            <div className="flex-1 py-3 px-4 rounded-xl font-bold text-sm uppercase tracking-wider bg-primary text-primary-foreground glow-zonna text-center">
               <Target className="w-4 h-4 inline mr-2" />
-              Domínio
-            </button>
+              Modo Domínio
+            </div>
           </div>
         )}
 
@@ -358,31 +317,45 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
             </div>
             <div className="text-center">
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-1">
-                Modo
+                {isRecording && distanceToStart !== null ? 'Até início' : 'Modo'}
               </p>
-              <p className="text-lg font-bold text-primary uppercase">
-                {mode === 'livre' ? 'Livre' : 'Domínio'}
-              </p>
+              {isRecording && distanceToStart !== null ? (
+                <p className={cn(
+                  "text-2xl font-mono-display font-bold",
+                  distanceToStart <= CLOSE_CIRCUIT_RADIUS ? "text-green-400" : "text-foreground"
+                )}>
+                  {distanceToStart}
+                  <span className="text-sm text-primary ml-1">m</span>
+                </p>
+              ) : (
+                <p className="text-lg font-bold text-primary uppercase">
+                  Domínio
+                </p>
+              )}
             </div>
           </div>
 
+          {/* Circuit Status Indicator */}
+          {isRecording && (
+            <div className={cn(
+              "flex items-center justify-center gap-2 px-4 py-2 rounded-full mb-4 mx-auto w-fit",
+              canClose ? "bg-green-500/20 text-green-400" : "bg-muted text-muted-foreground"
+            )}>
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                canClose ? "bg-green-400 animate-pulse" : "bg-muted-foreground"
+              )} />
+              <span className="text-xs font-bold uppercase">
+                {canClose 
+                  ? '✓ Circuito fechado! Pronto para conquistar' 
+                  : `Retorne ao ponto inicial (≤${CLOSE_CIRCUIT_RADIUS}m)`
+                }
+              </span>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex items-center justify-center gap-4">
-            {mode === 'dominio' && isRecording && (
-              <div className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full",
-                canClose ? "bg-green-500/20 text-green-400" : "bg-muted text-muted-foreground"
-              )}>
-                <div className={cn(
-                  "w-2 h-2 rounded-full",
-                  canClose ? "bg-green-400 animate-pulse" : "bg-muted-foreground"
-                )} />
-                <span className="text-xs font-bold uppercase">
-                  {canClose ? 'Pronto para fechar' : 'Circuito aberto'}
-                </span>
-              </div>
-            )}
-
             {!isRecording ? (
               <Button
                 onClick={handleStart}
@@ -405,7 +378,7 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
                   Parar
                 </Button>
 
-                {mode === 'dominio' && canClose && (
+                {canClose && (
                   <Button
                     onClick={handleFinishDomain}
                     size="lg"
@@ -415,32 +388,9 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
                     Conquistar
                   </Button>
                 )}
-
-                {mode === 'livre' && distance >= 0.05 && (
-                  <Button
-                    onClick={handleFinishLivre}
-                    size="lg"
-                    className="bg-gradient-zonna text-primary-foreground font-black uppercase tracking-widest px-8 py-6 rounded-2xl glow-zonna-intense"
-                  >
-                    <Trophy className="w-5 h-5 mr-2" />
-                    Finalizar
-                  </Button>
-                )}
               </div>
             )}
           </div>
-
-          {/* Dominate Button - Standalone prominent button */}
-          {isRecording && mode === 'livre' && (
-            <div className="mt-4">
-              <DominateButton
-                isEnabled={canDominate}
-                distance={distance * 1000} // meters
-                minDistance={500}
-                onDominate={handleFinishLivre}
-              />
-            </div>
-          )}
         </motion.div>
       </div>
 
@@ -490,74 +440,69 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
                 CONQUISTADO!
               </motion.p>
 
-              {/* Stats with Dividers */}
+              {/* Stats */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="flex items-stretch justify-center gap-0 mb-8 py-6 px-4 bg-black/40 rounded-2xl border border-border"
+                className="bg-muted/30 rounded-2xl p-4 mb-6 space-y-3"
               >
-                {/* KM */}
-                <div className="flex-1 text-center px-4">
-                  <p className="font-mono-stats text-3xl font-bold tracking-wider text-foreground mb-2">
-                    {lastStats.distance.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                    KM
-                  </p>
+                <div className="flex justify-between items-center py-2 border-b border-border/30">
+                  <span className="text-muted-foreground text-sm uppercase tracking-wider">Área</span>
+                  <span className="font-mono-display font-bold text-foreground text-lg">
+                    {lastStats.area.toLocaleString()} m²
+                  </span>
                 </div>
-
-                {/* Divider */}
-                <div className="stat-divider self-stretch" />
-
-                {/* Tempo */}
-                <div className="flex-1 text-center px-4">
-                  <p className="font-mono-stats text-3xl font-bold tracking-wider text-foreground mb-2">
+                <div className="flex justify-between items-center py-2 border-b border-border/30">
+                  <span className="text-muted-foreground text-sm uppercase tracking-wider">Distância</span>
+                  <span className="font-mono-display font-bold text-foreground text-lg">
+                    {lastStats.distance.toFixed(2)} km
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border/30">
+                  <span className="text-muted-foreground text-sm uppercase tracking-wider">Duração</span>
+                  <span className="font-mono-display font-bold text-foreground text-lg">
                     {formatTime(lastStats.duration)}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                    Tempo
-                  </p>
+                  </span>
                 </div>
-
-                {/* Divider */}
-                <div className="stat-divider self-stretch" />
-
-                {/* Área */}
-                <div className="flex-1 text-center px-4">
-                  <p className="font-mono-stats text-3xl font-bold tracking-wider text-primary mb-2">
-                    {lastStats.area.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">
-                    M²
-                  </p>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-muted-foreground text-sm uppercase tracking-wider">Ritmo</span>
+                  <span className="font-mono-display font-bold text-foreground text-lg">
+                    {lastStats.pace.toFixed(1)} min/km
+                  </span>
                 </div>
               </motion.div>
 
-              {/* Action Buttons */}
+              {/* Conquest Count */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6 }}
+                className="mb-6"
+              >
+                <p className="text-muted-foreground text-sm mb-1">Total de Conquistas</p>
+                <p className="text-4xl font-black text-primary">{conquestCount + 1}</p>
+              </motion.div>
+
+              {/* Share Button */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="space-y-4"
+                transition={{ delay: 0.7 }}
               >
-                {/* Primary Button - DOMINAR */}
-                <button
-                  onClick={handleCloseVictory}
-                  className="btn-zonna-primary w-full py-5 rounded-xl text-lg uppercase tracking-widest"
-                >
-                  Continuar Dominando
-                </button>
-
-                {/* Secondary Button - Gerar Story */}
                 <Button
                   onClick={() => setShowSnapshot(true)}
-                  size="lg"
-                  variant="ghost"
-                  className="w-full py-4 rounded-xl font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground border border-border hover:border-primary/50 transition-all"
+                  variant="outline"
+                  className="w-full mb-3 border-primary text-primary hover:bg-primary/10"
                 >
-                  <Share2 className="w-5 h-5 mr-2" />
-                  Gerar Story
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Compartilhar Conquista
+                </Button>
+                <Button
+                  onClick={handleCloseVictory}
+                  className="w-full bg-gradient-zonna text-primary-foreground font-bold"
+                >
+                  Continuar
                 </Button>
               </motion.div>
             </motion.div>
@@ -565,19 +510,20 @@ export function RecordingDashboard({ isOpen, onClose, onFinish, conquestCount, t
         )}
       </AnimatePresence>
 
-      {/* ZONNA Snapshot for Story Generation */}
-      <AnimatePresence>
-        {showSnapshot && (
-          <ZonnaSnapshot
-            isOpen={showSnapshot}
-            onClose={() => setShowSnapshot(false)}
-            conquestNumber={conquestCount + 1}
-            stats={lastStats}
-            path={lastPath}
-            trailColor={trailColor}
-          />
-        )}
-      </AnimatePresence>
+      {/* Snapshot Modal for Sharing */}
+      <ZonnaSnapshot
+        isOpen={showSnapshot}
+        onClose={() => setShowSnapshot(false)}
+        stats={{
+          area: lastStats.area,
+          distance: lastStats.distance,
+          duration: lastStats.duration,
+          pace: lastStats.pace,
+        }}
+        conquestNumber={conquestCount + 1}
+        path={lastPath}
+        trailColor={trailColor}
+      />
     </motion.div>
   );
 }
