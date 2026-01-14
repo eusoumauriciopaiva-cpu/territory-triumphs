@@ -36,7 +36,7 @@ export function PostInteractions({ postId, postOwnerId, locationName, onViewProf
     if (!user) return;
     
     const hasReaction = userReactions.some(r => r.reaction_type === type);
-    toggleReaction(type);
+    toggleReaction({ type, postOwnerId });
 
     // Create notification if adding reaction
     if (!hasReaction) {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { updateMissionProgress } from '@/lib/missionUtils';
 import type { Profile } from '@/types';
 
 export interface Comment {
@@ -52,10 +53,15 @@ export function useComments(postId: string) {
         .single();
       
       if (error) throw error;
+
+      // Update mission progress for 'engajamento' (comment on 2 posts)
+      await updateMissionProgress(user.id, 'engajamento', 1);
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', postId] });
+      queryClient.invalidateQueries({ queryKey: ['daily-missions'] });
     },
   });
 
