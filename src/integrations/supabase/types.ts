@@ -50,6 +50,47 @@ export type Database = {
         }
         Relationships: []
       }
+      conquest_posts: {
+        Row: {
+          conquest_id: string
+          created_at: string
+          description: string | null
+          id: string
+          map_snapshot_url: string | null
+          photo_urls: string[] | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          conquest_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          map_snapshot_url?: string | null
+          photo_urls?: string[] | null
+          title?: string
+          user_id: string
+        }
+        Update: {
+          conquest_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          map_snapshot_url?: string | null
+          photo_urls?: string[] | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conquest_posts_conquest_id_fkey"
+            columns: ["conquest_id"]
+            isOneToOne: false
+            referencedRelation: "conquests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conquests: {
         Row: {
           area: number

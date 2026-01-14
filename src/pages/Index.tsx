@@ -22,9 +22,11 @@ import { ClanProfile } from '@/components/ClanProfile';
 import { SyncOverlay } from '@/components/SyncOverlay';
 import { NotificationBell } from '@/components/NotificationBell';
 import { TrackingNotificationBar } from '@/components/TrackingNotificationBar';
+import { ConquestRegistrationModal } from '@/components/ConquestRegistrationModal';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { useUnreadConflictCount } from '@/hooks/useConflicts';
-import type { Conquest, RecordMode, Profile, Group } from '@/types';
+import type { Conquest, Profile, Group } from '@/types';
 
 function AppContent() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -35,6 +37,7 @@ function AppContent() {
   const { data: allProfiles = [] } = useProfiles();
   const { createChallenge, pendingChallenges } = useChallenges();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('feed');
@@ -65,6 +68,17 @@ function AppContent() {
 
   // Visitable profile state
   const [visitingProfile, setVisitingProfile] = useState<Profile | null>(null);
+
+  // Conquest registration modal state
+  const [conquestRegistration, setConquestRegistration] = useState<{
+    isOpen: boolean;
+    conquestId: string;
+    stats: { area: number; distance: number; duration: number };
+  }>({
+    isOpen: false,
+    conquestId: '',
+    stats: { area: 0, distance: 0, duration: 0 },
+  });
 
   // Fetch opponent profile for invasion/duel
   const { data: invasionOwnerProfile } = usePublicProfile(invasionAlert.conquest?.user_id || null);
@@ -107,17 +121,32 @@ function AppContent() {
     area: number; 
     distance: number;
     duration: number;
-    mode: RecordMode;
+    mode: 'dominio';
   }) => {
     try {
-      await addConquest.mutateAsync({
+      const result = await addConquest.mutateAsync({
         path: data.path,
         area: data.area,
         distance: data.distance,
       });
+      
+      // Open conquest registration modal
+      if (result?.id) {
+        setConquestRegistration({
+          isOpen: true,
+          conquestId: result.id,
+          stats: { area: data.area, distance: data.distance, duration: data.duration },
+        });
+      }
     } catch (error) {
       console.error('Failed to save conquest:', error);
     }
+  };
+
+  const handleConquestRegistrationComplete = () => {
+    setConquestRegistration({ isOpen: false, conquestId: '', stats: { area: 0, distance: 0, duration: 0 } });
+    queryClient.invalidateQueries({ queryKey: ['conquest-posts'] });
+    setIsRecordOpen(false);
   };
 
   const handleShowOnMap = (conquest: Conquest) => {
@@ -277,7 +306,7 @@ function AppContent() {
             className="h-full w-full"
           >
             {activeTab === 'feed' && (
-              <FeedScreen conquests={visibleConquests} />
+              <FeedScreen />
             )}
             {activeTab === 'map' && (
               <MapScreen 
@@ -331,6 +360,15 @@ function AppContent() {
           />
         )}
       </AnimatePresence>
+
+      {/* Conquest Registration Modal */}
+      <ConquestRegistrationModal
+        isOpen={conquestRegistration.isOpen}
+        onClose={handleConquestRegistrationComplete}
+        onComplete={handleConquestRegistrationComplete}
+        conquestId={conquestRegistration.conquestId}
+        stats={conquestRegistration.stats}
+      />
     </div>
   );
 }

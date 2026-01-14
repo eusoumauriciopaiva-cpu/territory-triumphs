@@ -12,6 +12,39 @@ interface MapScreenProps {
   onSelectConquest: (conquest: Conquest | null) => void;
 }
 
+// Local storage key for cached position
+const LAST_POSITION_KEY = 'zonna_last_position';
+
+// Get cached position from localStorage
+function getCachedPosition(): [number, number] | null {
+  try {
+    const cached = localStorage.getItem(LAST_POSITION_KEY);
+    if (cached) {
+      const { lat, lng, timestamp } = JSON.parse(cached);
+      // Use cached position if less than 1 hour old
+      if (Date.now() - timestamp < 3600000) {
+        return [lat, lng];
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
+// Save position to localStorage
+function cachePosition(lat: number, lng: number) {
+  try {
+    localStorage.setItem(LAST_POSITION_KEY, JSON.stringify({
+      lat,
+      lng,
+      timestamp: Date.now(),
+    }));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 // Calculate bearing between two points (in degrees)
 function calculateBearing(from: [number, number], to: [number, number]): number {
   const lat1 = from[0] * Math.PI / 180;
@@ -41,7 +74,8 @@ function calculateDistance(from: [number, number], to: [number, number]): number
 }
 
 export function MapScreen({ conquests, selectedConquest, onSelectConquest }: MapScreenProps) {
-  const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
+  // Start with cached position for instant loading
+  const [userPosition, setUserPosition] = useState<[number, number] | null>(getCachedPosition);
   const [userBearing, setUserBearing] = useState<number>(0);
   const [followUser, setFollowUser] = useState(true);
   const [mapStyle, setMapStyle] = useState<MapStyleType>('standard');
@@ -49,6 +83,19 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
 
   // Watch user position continuously with maximum precision
   useEffect(() => {
+    // First, try to get a quick low-accuracy position
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setUserPosition(newPos);
+        cachePosition(newPos[0], newPos[1]);
+        lastPositionRef.current = newPos;
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 2000, maximumAge: 60000 }
+    );
+
+    // Then watch with high accuracy
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
@@ -73,6 +120,7 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
         }
 
         setUserPosition(newPos);
+        cachePosition(newPos[0], newPos[1]);
       },
       () => {},
       { 
@@ -102,7 +150,7 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
         mapStyle={mapStyle}
       />
 
-      {/* Controls */}
+      {/* Controls - High Contrast */}
       <div className="absolute bottom-24 right-4 flex flex-col gap-2">
         {/* Map Style Toggle */}
         <MapStyleToggle
@@ -114,9 +162,9 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
           variant="secondary"
           size="icon"
           onClick={handleLocate}
-          className="glass border border-border rounded-full w-12 h-12"
+          className="bg-black/90 hover:bg-black border border-white/20 rounded-full w-12 h-12 shadow-xl"
         >
-          <Focus className="w-5 h-5" />
+          <Focus className="w-5 h-5 text-white" />
         </Button>
 
         {selectedConquest && (
@@ -124,25 +172,25 @@ export function MapScreen({ conquests, selectedConquest, onSelectConquest }: Map
             variant="secondary"
             size="icon"
             onClick={() => onSelectConquest(null)}
-            className="glass border border-border rounded-full w-12 h-12"
+            className="bg-black/90 hover:bg-black border border-white/20 rounded-full w-12 h-12 shadow-xl"
           >
-            <Layers className="w-5 h-5" />
+            <Layers className="w-5 h-5 text-white" />
           </Button>
         )}
       </div>
 
       {/* Selected conquest info */}
       {selectedConquest && (
-        <div className="absolute top-4 left-4 right-4 glass rounded-2xl p-4 border border-border">
+        <div className="absolute top-4 left-4 right-4 bg-black/90 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground font-bold uppercase">Conquista Selecionada</p>
-              <p className="text-lg font-black">
+              <p className="text-xs text-white/60 font-bold uppercase">Conquista Selecionada</p>
+              <p className="text-lg font-black text-white">
                 {selectedConquest.area.toLocaleString()} m²
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/60">
                 {Number(selectedConquest.distance).toFixed(2)} km
               </p>
             </div>

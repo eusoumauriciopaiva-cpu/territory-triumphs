@@ -54,14 +54,28 @@ export function AuthScreen() {
         animate={{ scale: 1, opacity: 1 }}
         className="mb-8 text-center"
       >
-        <div className="w-20 h-20 bg-gradient-neon rounded-2xl rotate-6 flex items-center justify-center mx-auto mb-4 glow-neon">
-          <span className="text-4xl">🏃</span>
+        {/* ZONNA Logo */}
+        <div className="relative mx-auto mb-6">
+          <div className="w-24 h-24 mx-auto relative">
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-primary rounded-2xl blur-xl opacity-40 animate-pulse" />
+            {/* Logo container */}
+            <div className="relative w-full h-full bg-black border-2 border-primary rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,79,0,0.4)]">
+              <span className="text-4xl font-black tracking-tighter text-primary" style={{ fontFamily: 'system-ui' }}>
+                Z
+              </span>
+            </div>
+          </div>
         </div>
-        <h1 className="text-3xl font-black tracking-tighter italic">
-          Territory<span className="text-primary">Capture</span>
+        
+        {/* ZONNA Title */}
+        <h1 className="text-4xl font-black tracking-[0.2em] text-foreground mb-2">
+          ZONNA
         </h1>
-        <p className="text-muted-foreground text-sm mt-2">
-          Domine territórios. Evolua seu elo.
+        
+        {/* Official Slogan */}
+        <p className="text-primary text-sm font-bold uppercase tracking-widest">
+          Domine o chão que você pisa
         </p>
       </motion.div>
 
@@ -120,7 +134,7 @@ export function AuthScreen() {
         <Button 
           type="submit" 
           disabled={loading}
-          className="w-full h-14 bg-gradient-neon rounded-xl font-bold uppercase tracking-widest glow-neon"
+          className="w-full h-14 bg-gradient-zonna rounded-xl font-bold uppercase tracking-widest glow-zonna-intense"
         >
           {loading ? (
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -151,6 +165,16 @@ export function AuthScreen() {
           )}
         </button>
       </motion.div>
+
+      {/* Footer */}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="mt-12 text-xs text-muted-foreground/50"
+      >
+        © 2024 ZONNA • Todos os direitos reservados
+      </motion.p>
     </div>
   );
 }
