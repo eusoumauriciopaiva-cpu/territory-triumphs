@@ -54,24 +54,15 @@ export function AuthScreen() {
         animate={{ scale: 1, opacity: 1 }}
         className="mb-8 text-center"
       >
-        {/* ZONNA Logo */}
+        {/* ZONNA Logo Image */}
         <div className="relative mx-auto mb-6">
-          <div className="w-24 h-24 mx-auto relative">
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-primary rounded-2xl blur-xl opacity-40 animate-pulse" />
-            {/* Logo container */}
-            <div className="relative w-full h-full bg-black border-2 border-primary rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,79,0,0.4)]">
-              <span className="text-4xl font-black tracking-tighter text-primary" style={{ fontFamily: 'system-ui' }}>
-                Z
-              </span>
-            </div>
-          </div>
+          <div className="absolute inset-0 bg-primary rounded-2xl blur-2xl opacity-30 animate-pulse scale-125" />
+          <img 
+            src="/zonna-logo.png" 
+            alt="ZONNA" 
+            className="relative w-48 h-auto mx-auto drop-shadow-[0_0_30px_rgba(255,79,0,0.6)]"
+          />
         </div>
-        
-        {/* ZONNA Title */}
-        <h1 className="text-4xl font-black tracking-[0.2em] text-foreground mb-2">
-          ZONNA
-        </h1>
         
         {/* Official Slogan */}
         <p className="text-primary text-sm font-bold uppercase tracking-widest">
@@ -173,7 +164,7 @@ export function AuthScreen() {
         transition={{ delay: 0.3 }}
         className="mt-12 text-xs text-muted-foreground/50"
       >
-        © 2024 ZONNA • Todos os direitos reservados
+        © 2026 ZONNA • Todos os direitos reservados
       </motion.p>
     </div>
   );

@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { Flame } from 'lucide-react';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -27,28 +26,20 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       >
-        {/* Icon */}
+        {/* ZONNA Logo Image */}
         <motion.div
           className="relative mb-6"
           initial={{ y: 20 }}
           animate={{ y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <div className="absolute inset-0 bg-primary rounded-full blur-2xl opacity-50 animate-pulse-zonna" />
-          <div className="relative bg-gradient-zonna p-6 rounded-3xl glow-zonna-intense">
-            <Flame className="w-16 h-16 text-primary-foreground" />
-          </div>
+          <div className="absolute inset-0 bg-primary rounded-2xl blur-3xl opacity-40 animate-pulse-zonna scale-150" />
+          <img 
+            src="/zonna-logo.png" 
+            alt="ZONNA" 
+            className="relative w-64 h-auto drop-shadow-[0_0_40px_rgba(255,79,0,0.7)]"
+          />
         </motion.div>
-
-        {/* Brand Name */}
-        <motion.h1
-          className="text-6xl font-black tracking-tighter text-foreground text-glow-zonna"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          ZONNA
-        </motion.h1>
 
         {/* Slogan */}
         <motion.p
