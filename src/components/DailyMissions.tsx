@@ -88,23 +88,18 @@ export function DailyMissions() {
     levelProgress,
   } = useDailyMissions();
 
-  // Initialize missions on mount
+  // Initialize missions on mount - apenas uma vez
   useEffect(() => {
-    if (missions.length === 0 && !isLoading) {
+    if (missions.length === 0 && !isLoading && !initializeMissions.isPending) {
       initializeMissions.mutate();
     }
-  }, [missions.length, isLoading]);
+  }, [missions.length, isLoading, initializeMissions.isPending]);
 
-  if (isLoading) {
-    return (
-      <div className="p-4 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Não mostrar loading infinito - sempre renderizar com dados disponíveis
+  const safeMissions = missions || [];
 
-  const totalXPAvailable = missions.reduce((acc, m) => acc + (m.collected ? 0 : m.xpReward), 0);
-  const completedMissions = missions.filter(m => m.collected).length;
+  const totalXPAvailable = safeMissions.reduce((acc, m) => acc + (m.collected ? 0 : m.xpReward), 0);
+  const completedMissions = safeMissions.filter(m => m.collected).length;
 
   return (
     <motion.div
@@ -119,7 +114,7 @@ export function DailyMissions() {
             🎯 Missões Diárias
           </h3>
           <span className="text-xs text-muted-foreground">
-            {completedMissions}/{missions.length} completas
+            {completedMissions}/{safeMissions.length} completas
           </span>
         </div>
 
@@ -145,14 +140,25 @@ export function DailyMissions() {
 
       {/* Missions List */}
       <div className="space-y-2">
-        {missions.map((mission) => (
-          <MissionCard
-            key={mission.type}
-            mission={mission}
-            onCollect={() => collectMissionXP.mutate(mission.type)}
-            isCollecting={collectMissionXP.isPending}
-          />
-        ))}
+        {isLoading && safeMissions.length === 0 ? (
+          <div className="p-4 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="ml-2 text-sm text-muted-foreground">Carregando missões...</span>
+          </div>
+        ) : safeMissions.length === 0 ? (
+          <div className="p-4 text-center text-sm text-muted-foreground">
+            Nenhuma missão disponível no momento.
+          </div>
+        ) : (
+          safeMissions.map((mission) => (
+            <MissionCard
+              key={mission.type}
+              mission={mission}
+              onCollect={() => collectMissionXP.mutate(mission.type)}
+              isCollecting={collectMissionXP.isPending}
+            />
+          ))
+        )}
       </div>
 
       {/* Reset info */}

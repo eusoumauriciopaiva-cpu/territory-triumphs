@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import logoBranca from '../assets/logo-branca.png';
 
 export function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -36,10 +37,10 @@ export function AuthScreen() {
         toast({ title: 'Conta criada com sucesso!' });
       }
     } catch (error: any) {
-      toast({ 
-        title: 'Erro', 
+      toast({
+        title: 'Erro',
         description: error.message || 'Algo deu errado',
-        variant: 'destructive' 
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -55,15 +56,18 @@ export function AuthScreen() {
         className="mb-8 text-center"
       >
         {/* ZONNA Logo Image */}
-        <div className="relative mx-auto mb-6">
-          <div className="absolute inset-0 bg-primary rounded-2xl blur-2xl opacity-30 animate-pulse scale-125" />
-          <img 
-            src="/zonna-logo.png" 
-            alt="ZONNA" 
-            className="relative w-48 h-auto mx-auto drop-shadow-[0_0_30px_rgba(255,79,0,0.6)]"
+        <div className="relative mx-auto mb-8 flex justify-center items-center">
+          {/* Efeito de brilho atrás da logo para dar profundidade */}
+          <div className="absolute inset-0 bg-cyan-500/10 blur-[50px] rounded-full scale-150" />
+
+          <img
+            src={logoBranca}
+            alt="ZONNA"
+            className="relative w-49 h-auto object-contain mix-blend-screen"
+            style={{ filter: 'brightness(1.2)' }}
           />
         </div>
-        
+
         {/* Official Slogan */}
         <p className="text-primary text-sm font-bold uppercase tracking-widest">
           Domine o chão que você pisa
@@ -122,8 +126,8 @@ export function AuthScreen() {
           </button>
         </div>
 
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           disabled={loading}
           className="w-full h-14 bg-gradient-zonna rounded-xl font-bold uppercase tracking-widest glow-zonna-intense"
         >

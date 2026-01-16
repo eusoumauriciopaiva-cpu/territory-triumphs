@@ -73,10 +73,12 @@ const SIZES = {
 };
 
 export function EloBadge({ rank, size = 'md', showLabel = true, animated = true }: EloBadgeProps) {
-  const Icon = RANK_ICONS[rank];
-  const colors = RANK_COLORS[rank];
+  // Proteção: garantir que rank seja válido
+  const safeRank = (rank || 'bronze').toLowerCase() as AppRank;
+  const Icon = RANK_ICONS[safeRank] || Shield;
+  const colors = RANK_COLORS[safeRank] || RANK_COLORS['bronze'];
   const sizeConfig = SIZES[size];
-  const config = RANK_CONFIG[rank];
+  const config = RANK_CONFIG[safeRank] || RANK_CONFIG['bronze'] || Object.values(RANK_CONFIG)[0];
 
   return (
     <div className="flex items-center gap-2">
@@ -109,16 +111,21 @@ interface XPProgressBarProps {
 }
 
 export function XPProgressBar({ profile, showDetails = true }: XPProgressBarProps) {
-  const currentRankConfig = RANK_CONFIG[profile.rank];
-  const nextRank = getNextRank(profile.rank);
-  const nextRankConfig = nextRank ? RANK_CONFIG[nextRank] : null;
+  // Proteção total: garantir que sempre haja um objeto válido
+  const safeRank = (profile?.rank || 'bronze').toLowerCase() as AppRank;
+  const currentRankConfig = RANK_CONFIG[safeRank] || RANK_CONFIG['bronze'] || Object.values(RANK_CONFIG)[0];
+  const nextRank = getNextRank(safeRank);
+  const nextRankConfig = nextRank ? (RANK_CONFIG[nextRank] || null) : null;
   
-  const currentMinXp = currentRankConfig.minXp;
-  const nextMinXp = nextRankConfig?.minXp || currentMinXp;
-  const xpInCurrentRank = profile.xp - currentMinXp;
-  const xpNeededForNext = nextMinXp - currentMinXp;
+  // Garantir que minXp sempre exista
+  const currentMinXp = currentRankConfig?.minXp ?? 0;
+  const nextMinXp = nextRankConfig?.minXp ?? currentMinXp;
+  const safeXp = Number(profile?.xp ?? 0);
+  
+  const xpInCurrentRank = Math.max(0, safeXp - currentMinXp);
+  const xpNeededForNext = Math.max(1, nextMinXp - currentMinXp); // Evitar divisão por zero
   const progress = nextRankConfig 
-    ? Math.min((xpInCurrentRank / xpNeededForNext) * 100, 100)
+    ? Math.min(Math.max(0, (xpInCurrentRank / xpNeededForNext) * 100), 100)
     : 100;
 
   return (
@@ -126,11 +133,11 @@ export function XPProgressBar({ profile, showDetails = true }: XPProgressBarProp
       {showDetails && (
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground font-medium">
-            {profile.xp.toLocaleString()} XP
+            {safeXp.toLocaleString()} XP
           </span>
           {nextRankConfig && (
             <span className="text-muted-foreground">
-              {(nextMinXp - profile.xp).toLocaleString()} até {nextRankConfig.label}
+              {Math.max(0, nextMinXp - safeXp).toLocaleString()} até {nextRankConfig.label}
             </span>
           )}
         </div>
@@ -199,20 +206,24 @@ interface EloCardProps {
 }
 
 export function EloCard({ profile, compact = false }: EloCardProps) {
+  // Proteção: garantir que rank seja válido
+  const safeRank = (profile?.rank || 'bronze').toLowerCase() as AppRank;
+  const rankConfig = RANK_CONFIG[safeRank] || RANK_CONFIG['bronze'] || Object.values(RANK_CONFIG)[0];
+  
   return (
     <div className={cn(
       'bg-card border border-border rounded-2xl overflow-hidden',
       compact ? 'p-4' : 'p-6'
     )}>
       <div className="flex items-center gap-4 mb-4">
-        <EloBadge rank={profile.rank} size={compact ? 'md' : 'lg'} showLabel={false} />
+        <EloBadge rank={safeRank} size={compact ? 'md' : 'lg'} showLabel={false} />
         <div className="flex-1">
-          <h3 className="font-bold text-foreground">{profile.name}</h3>
+          <h3 className="font-bold text-foreground">{profile?.name || 'Usuário'}</h3>
           <p className="text-sm text-muted-foreground">
-            Nível {profile.level} • {RANK_CONFIG[profile.rank].label}
+            Nível {profile?.level || 1} • {rankConfig?.label || 'Explorador'}
           </p>
         </div>
-        <StreakBadge streak={profile.current_streak} size={compact ? 'sm' : 'md'} />
+        <StreakBadge streak={profile?.current_streak || 0} size={compact ? 'sm' : 'md'} />
       </div>
       
       <XPProgressBar profile={profile} showDetails={!compact} />
@@ -221,13 +232,13 @@ export function EloCard({ profile, compact = false }: EloCardProps) {
         <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
           <div className="text-center">
             <p className="text-2xl font-mono-display font-bold text-foreground">
-              {profile.total_km.toFixed(1)}
+              {Number(profile?.total_km ?? 0).toFixed(1)}
             </p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">KM Total</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-mono-display font-bold text-primary">
-              {profile.total_area.toLocaleString()}
+              {Number(profile?.total_area ?? 0).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">m² Dominados</p>
           </div>

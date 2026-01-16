@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield, Users, Palette } from 'lucide-react';
+import { Trophy, LogOut, Flame, MapPin, Target, ChevronRight, Settings, Check, X, Loader2, AtSign, Shield } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
@@ -12,10 +12,10 @@ import { AvatarUpload } from './AvatarUpload';
 import { AdminCommandPanel } from './AdminCommandPanel';
 import { FollowersModal } from './FollowersModal';
 import { DailyMissions } from './DailyMissions';
-import { useNicknameValidation, validateNicknameFormat } from '@/hooks/useNicknameValidation';
+import { useNicknameValidation } from '@/hooks/useNicknameValidation';
 import { useIsAdmin } from '@/hooks/useAdmin';
 import { useFollowStats } from '@/hooks/useFollows';
-import type { Profile, Conquest } from '@/types';
+import type { Profile, Conquest, AppRank } from '@/types';
 import { RANK_CONFIG } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -49,19 +49,40 @@ export function ProfileScreen({
     type: 'followers' | 'following';
   }>({ isOpen: false, type: 'followers' });
 
-  // Check if user is admin - only if profile exists
+  // Check if user is admin
   const { data: isAdmin } = useIsAdmin();
 
-  // Get follow stats - only if profile and user_id exist
+  // Get follow stats
   const { data: followStats } = useFollowStats(profile?.user_id || '');
 
   // Nickname validation
   const nicknameValidation = useNicknameValidation(nickname);
 
+  // Normalização de Dados (Topo do Componente)
+  const safeStats = {
+    km: Number(profile?.total_km ?? 0),
+    area: Number(profile?.total_area ?? 0),
+    level: profile?.level ?? 1,
+    rankKey: (profile?.rank || 'bronze').toLowerCase() as AppRank
+  };
+  const currentRank = RANK_CONFIG[safeStats.rankKey] || RANK_CONFIG['bronze'] || Object.values(RANK_CONFIG)[0];
+
+  // Fallback de UI: Se profile for nulo, retorne loading simples
+  if (!profile) {
+    return (
+      <div className="flex h-full items-center justify-center text-white">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p>Carregando Perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Reset form when dialog opens
   useEffect(() => {
     if (isEditing && profile) {
-      setName(profile.name);
+      setName(profile.name || '');
       setNickname(profile.nickname || '');
     }
   }, [isEditing, profile]);
@@ -83,59 +104,47 @@ export function ProfileScreen({
     onUpdateProfile({ avatar_url: url });
   };
 
-  // Early return with loading state if profile is null
-  if (!profile) {
-    console.log('ProfileScreen - Profile is null, showing loading state');
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Validate profile rank exists in RANK_CONFIG
-  if (!profile.rank || !RANK_CONFIG[profile.rank]) {
-    console.error('ProfileScreen - Invalid rank:', profile.rank);
-    return (
-      <div className="flex items-center justify-center h-full p-4">
-        <div className="text-center">
-          <p className="text-destructive font-bold mb-2">Erro ao carregar perfil</p>
-          <p className="text-sm text-muted-foreground">Rank inválido: {profile.rank || 'não definido'}</p>
-        </div>
-      </div>
-    );
-  }
-
   const trailColor = (profile as any)?.trail_color || '#FF4F00';
-  const unlockedColors = (profile as any)?.unlocked_colors || ['#FF4F00'];
+  const safeHistory = history || [];
 
-  try {
-    return (
-      <div className="p-4 pb-24 overflow-y-auto h-full scrollbar-hide">
-        {/* Header with Avatar */}
+  // Formatação de área
+  const formatArea = (area: number): string => {
+    if (isNaN(area) || area === 0) return '0';
+    const rounded = Math.round(area);
+    if (rounded >= 1000000) {
+      return (rounded / 1000000).toFixed(1) + 'M';
+    } else if (rounded >= 1000) {
+      return (rounded / 1000).toFixed(1) + 'k';
+    }
+    return rounded.toLocaleString('pt-BR');
+  };
+
+  return (
+    <div className="p-4 pb-24 overflow-y-auto h-full scrollbar-hide">
+      {/* Header with Avatar */}
       <div className="flex flex-col items-center mb-6">
         <div className="relative mb-4">
           <AvatarUpload
-            userId={profile.user_id}
-            currentAvatar={profile.avatar_url}
-            name={profile.name}
+            userId={profile?.user_id || ''}
+            currentAvatar={profile?.avatar_url || null}
+            name={profile?.name || 'Usuário'}
             size="lg"
             onAvatarChange={handleAvatarChange}
           />
           <div className="absolute -bottom-2 -right-2">
-            <EloBadge rank={profile.rank} size="md" showLabel={false} />
+            <EloBadge rank={safeStats.rankKey} size="md" showLabel={false} />
           </div>
         </div>
 
-        <h2 className="text-2xl font-black tracking-tighter text-foreground">{profile.name}</h2>
-        {profile.nickname && (
+        <h2 className="text-2xl font-black tracking-tighter text-foreground">{profile?.name || 'Usuário'}</h2>
+        {profile?.nickname && (
           <p className="text-sm text-primary font-medium">@{profile.nickname}</p>
         )}
         <p className="text-xs text-muted-foreground font-mono mt-1">
-          #{profile.unique_code}
+          #{profile?.unique_code || '0000'}
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          Nível {profile.level || 0} • {profile.rank && RANK_CONFIG[profile.rank] ? RANK_CONFIG[profile.rank].label : 'Explorador'}
+          Nível {safeStats.level} • {currentRank?.label || 'Explorador'}
         </p>
 
         {/* Followers/Following Stats */}
@@ -157,7 +166,7 @@ export function ProfileScreen({
         </div>
 
         <div className="flex items-center gap-3">
-          <StreakBadge streak={profile.current_streak || 0} bestStreak={profile.best_streak} />
+          <StreakBadge streak={profile?.current_streak || 0} bestStreak={profile?.best_streak || 0} />
 
           <Dialog open={isEditing} onOpenChange={setIsEditing}>
             <DialogTrigger asChild>
@@ -230,7 +239,7 @@ export function ProfileScreen({
                       Código ZONNA (permanente)
                     </label>
                     <div className="bg-muted/50 px-3 py-2 rounded-md border border-border">
-                      <span className="font-mono text-primary font-bold">#{profile.unique_code}</span>
+                      <span className="font-mono text-primary font-bold">#{profile?.unique_code || '0000'}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground">
                       Seu ID único para recrutamento. Compartilhe com amigos!
@@ -296,12 +305,7 @@ export function ProfileScreen({
             <div className="bg-card p-4 rounded-2xl border border-border text-center">
               <MapPin className="w-5 h-5 mx-auto mb-2 text-primary" />
               <p className="text-xl font-mono-stats font-bold text-foreground tracking-wider break-words">
-                {(() => {
-                  const km = profile?.total_km;
-                  if (km === null || km === undefined) return '0.0';
-                  const numKm = typeof km === 'string' ? parseFloat(km) : Number(km);
-                  return isNaN(numKm) ? '0.0' : numKm.toFixed(1);
-                })()}
+                {safeStats.km.toFixed(1)}
               </p>
               <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">KM</p>
             </div>
@@ -310,20 +314,7 @@ export function ProfileScreen({
             <div className="bg-card p-4 rounded-2xl border border-border text-center">
               <Target className="w-5 h-5 mx-auto mb-2 text-primary" />
               <p className="text-xl font-mono-stats font-bold text-primary tracking-wider break-words">
-                {(() => {
-                  const area = profile?.total_area;
-                  if (area === null || area === undefined) return '0';
-                  const numArea = typeof area === 'string' ? parseFloat(area) : Number(area);
-                  if (isNaN(numArea)) return '0';
-                  const rounded = Math.round(numArea);
-                  // Formata números grandes de forma compacta
-                  if (rounded >= 1000000) {
-                    return (rounded / 1000000).toFixed(1) + 'M';
-                  } else if (rounded >= 1000) {
-                    return (rounded / 1000).toFixed(1) + 'k';
-                  }
-                  return rounded.toLocaleString('pt-BR');
-                })()}
+                {formatArea(safeStats.area)}
               </p>
               <p className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">m²</p>
             </div>
@@ -352,10 +343,10 @@ export function ProfileScreen({
           {showHeatmap && (
             <div className="h-64 rounded-2xl overflow-hidden border border-border">
               <ZonnaMap3D
-                userPosition={history && history.length > 0 && history[0]?.path?.[0] ? history[0].path[0] : null}
+                userPosition={safeHistory.length > 0 && safeHistory[0]?.path?.[0] ? safeHistory[0].path[0] : null}
                 heatmapMode={true}
                 trailColor={trailColor}
-                userConquests={history || []}
+                userConquests={safeHistory}
               />
             </div>
           )}
@@ -373,7 +364,7 @@ export function ProfileScreen({
       {/* History Section */}
       {activeSection === 'history' && (
         <div>
-          {!history || history.length === 0 ? (
+          {safeHistory.length === 0 ? (
             <div className="text-center py-12 bg-card rounded-2xl border border-border">
               <Trophy className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
               <p className="text-muted-foreground font-medium">
@@ -385,41 +376,35 @@ export function ProfileScreen({
             </div>
           ) : (
             <div className="space-y-2">
-              {(history || []).slice(0, 15).map((conquest, index) => (
-                <button
-                  key={conquest.id}
-                  onClick={() => onShowOnMap(conquest)}
-                  className="w-full bg-card p-4 rounded-xl border border-border flex items-center justify-between group hover:border-primary/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2.5 rounded-xl border border-primary/20 group-hover:bg-primary/20 transition-colors">
-                      <Trophy className="w-4 h-4 text-primary" />
+              {safeHistory.slice(0, 15).map((conquest, index) => {
+                const dist = Number(conquest?.distance ?? 0);
+                const area = Number(conquest?.area ?? 0);
+                return (
+                  <button
+                    key={conquest?.id || index}
+                    onClick={() => conquest && onShowOnMap(conquest)}
+                    className="w-full bg-card p-4 rounded-xl border border-border flex items-center justify-between group hover:border-primary/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 p-2.5 rounded-xl border border-primary/20 group-hover:bg-primary/20 transition-colors">
+                        <Trophy className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-bold text-sm block">Território #{safeHistory.length - index}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {isNaN(dist) ? '0.00 km' : dist.toFixed(2) + ' km'} • {conquest?.created_at ? new Date(conquest.created_at).toLocaleDateString('pt-BR') : 'Data inválida'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <span className="font-bold text-sm block">Território #{(history?.length || 0) - index}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {(() => {
-                          const dist = conquest?.distance;
-                          if (dist === null || dist === undefined) return '0.00 km';
-                          const numDist = typeof dist === 'string' ? parseFloat(dist) : Number(dist);
-                          return isNaN(numDist) ? '0.00 km' : numDist.toFixed(2) + ' km';
-                        })()} • {conquest?.created_at ? new Date(conquest.created_at).toLocaleDateString('pt-BR') : 'Data inválida'}
+                    <div className="flex items-center gap-2">
+                      <span className="text-primary font-mono-stats font-bold text-sm">
+                        {formatArea(area)} m²
                       </span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-primary font-mono-stats font-bold text-sm">
-                      {(() => {
-                        const area = conquest?.area;
-                        if (area === null || area === undefined) return '0 m²';
-                        const numArea = typeof area === 'string' ? parseFloat(area) : Number(area);
-                        return isNaN(numArea) ? '0 m²' : Math.round(numArea).toLocaleString('pt-BR') + ' m²';
-                      })()}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -431,7 +416,7 @@ export function ProfileScreen({
       )}
 
       {/* Followers Modal */}
-      {profile && (
+      {profile?.user_id && (
         <FollowersModal
           isOpen={followersModal.isOpen}
           onClose={() => setFollowersModal({ isOpen: false, type: 'followers' })}
@@ -456,16 +441,5 @@ export function ProfileScreen({
         </Button>
       </div>
     </div>
-    );
-  } catch (error) {
-    console.error('ProfileScreen - Error rendering:', error);
-    return (
-      <div className="flex items-center justify-center h-full p-4">
-        <div className="text-center">
-          <p className="text-destructive font-bold mb-2">Erro ao renderizar perfil</p>
-          <p className="text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Erro desconhecido'}</p>
-        </div>
-      </div>
-    );
-  }
+  );
 }

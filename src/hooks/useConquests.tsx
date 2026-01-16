@@ -12,35 +12,57 @@ export function useConquests() {
   const { data: conquests = [], isLoading } = useQuery({
     queryKey: ['conquests'],
     queryFn: async () => {
-      // Get conquests
-      const { data: conquestsData, error } = await supabase
-        .from('conquests')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      // Get all conquests (no limit for global map)
+      // Use pagination for very large datasets
+      let allConquests: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: conquestsData, error } = await supabase
+          .from('conquests')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        
+        if (error) throw error;
+        
+        if (conquestsData && conquestsData.length > 0) {
+          allConquests = [...allConquests, ...conquestsData];
+          hasMore = conquestsData.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
       
-      if (error) throw error;
-      
-      // Get profiles for the users
-      const userIds = [...new Set((conquestsData || []).map(c => c.user_id))];
-      
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('user_id', userIds);
-      
+      // Get profiles for the users (batch to avoid too many requests)
+      const userIds = [...new Set(allConquests.map(c => c.user_id))];
       const profilesMap: Record<string, Profile> = {};
-      (profilesData || []).forEach(p => {
-        profilesMap[p.user_id] = p as Profile;
-      });
       
-      return (conquestsData || []).map(conquest => ({
+      // Batch profile requests
+      for (let i = 0; i < userIds.length; i += 100) {
+        const batch = userIds.slice(i, i + 100);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('*')
+          .in('user_id', batch);
+        
+        (profilesData || []).forEach(p => {
+          profilesMap[p.user_id] = p as Profile;
+        });
+      }
+      
+      return allConquests.map(conquest => ({
         ...conquest,
         path: conquest.path as [number, number][],
         profile: profilesMap[conquest.user_id],
       })) as Conquest[];
     },
     enabled: !!user,
+    staleTime: 60000, // Cache for 1 minute
+    gcTime: 300000, // Keep in cache for 5 minutes
   });
 
   const myConquests = conquests.filter(c => c.user_id === user?.id);

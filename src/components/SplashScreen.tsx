@@ -35,7 +35,7 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
         >
           <div className="absolute inset-0 bg-primary rounded-2xl blur-3xl opacity-40 animate-pulse-zonna scale-150" />
           <img 
-            src="/zonna-logo.png" 
+            src={'/zonna-logo.png'} 
             alt="ZONNA" 
             className="relative w-64 h-auto drop-shadow-[0_0_40px_rgba(255,79,0,0.7)]"
           />

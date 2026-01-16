@@ -198,67 +198,65 @@ export function useBackgroundTracking(config: Partial<BackgroundTrackingConfig> 
       });
     }, 1000);
 
-    // Start geolocation watch
+    // Start geolocation watch with professional-grade filters
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
+        // FILTRO 1: Anti-Drift - Descarta pontos com accuracy > 20 metros
+        const accuracy = position.coords.accuracy || Infinity;
+        if (accuracy > 20) {
+          console.log("GPS impreciso descartado (accuracy > 20m):", accuracy);
+          return;
+        }
+    
         const newPos: [number, number] = [
           position.coords.latitude,
           position.coords.longitude,
         ];
-
+    
         setState(prev => {
-          // Apply distance filter - only record if moved enough
+          // FILTRO 2: Filtro de Movimento - Só registra se moveu mais de 3 metros
+          // Isso remove o drift quando está parado
           if (lastPositionRef.current) {
             const dist = calculateDistance(
               lastPositionRef.current[0], lastPositionRef.current[1],
               newPos[0], newPos[1]
             );
             
-            if (dist < fullConfig.distanceFilter) {
-              return prev; // Skip this point
+            // Usa distanceFilter do config ou padrão de 3m
+            const minDistance = fullConfig.distanceFilter || 3;
+            if (dist < minDistance) {
+              return prev;
             }
+            
+            // Atualiza distância acumulada
+            const newDistance = prev.distance + dist;
+            
+            lastPositionRef.current = newPos;
+            
+            return {
+              ...prev,
+              path: [...prev.path, newPos],
+              distance: newDistance,
+              canDominate: newDistance >= fullConfig.minDistanceForDominate,
+            };
+          } else {
+            // Primeiro ponto - sempre aceita
+            lastPositionRef.current = newPos;
+            return {
+              ...prev,
+              path: [newPos],
+              distance: 0,
+            };
           }
-
-          lastPositionRef.current = newPos;
-          
-          const newPath = [...prev.path, newPos];
-          
-          // Calculate total distance
-          let totalDist = prev.distance;
-          if (prev.path.length > 0) {
-            const lastPoint = prev.path[prev.path.length - 1];
-            totalDist += calculateDistance(
-              lastPoint[0], lastPoint[1],
-              newPos[0], newPos[1]
-            );
-          }
-
-          // Check if dominate is now available
-          const newCanDominate = totalDist >= fullConfig.minDistanceForDominate;
-          
-          // Trigger alert when crossing threshold
-          if (newCanDominate && !prev.canDominate) {
-            triggerDominateAlert();
-            config.onDominateReady?.();
-          }
-
-          config.onPositionUpdate?.(newPos);
-
-          return {
-            ...prev,
-            path: newPath,
-            distance: totalDist,
-            canDominate: newCanDominate,
-          };
         });
       },
       (error) => {
         console.error('Geolocation error:', error);
       },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 5000,
+      { 
+        enableHighAccuracy: true, // Força uso do GPS real
+        timeout: 10000,
+        maximumAge: 0, // Sempre busca posição fresca
       }
     );
 

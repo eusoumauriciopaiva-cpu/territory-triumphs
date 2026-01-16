@@ -199,6 +199,23 @@ export function ZonnaMap3D({
       antialias: true,
       maxPitch: 0, // Lock pitch to prevent tilting
       pitchWithRotate: false, // Disable pitch with rotate gesture
+      // Performance optimizations
+      renderWorldCopies: false, // Don't render multiple world copies
+      maxTileCacheSize: 50, // Cache up to 50 tiles
+      fadeDuration: 0, // Disable fade for better performance
+      // Enable tile caching
+      transformRequest: (url: string, resourceType: string) => {
+        // Enable caching for tile requests
+        if (resourceType === 'Tile') {
+          return {
+            url,
+            headers: {
+              'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
+            },
+          };
+        }
+        return { url };
+      },
     });
 
     map.current.on('load', () => {
@@ -339,9 +356,18 @@ export function ZonnaMap3D({
     });
   }, [mapStyle, loaded, recordingPath, trailColor]);
 
-  // Update user marker with pulse effect - persists across style changes
+  // Smooth marker position interpolation
+  const smoothMarkerPositionRef = useRef<[number, number] | null>(null);
+  const markerAnimationRef = useRef<number | null>(null);
+
+  // Update user marker with smooth animation and pulse effect
   useEffect(() => {
     if (!map.current || !loaded || !userPosition) return;
+
+    // Initialize smooth position
+    if (!smoothMarkerPositionRef.current) {
+      smoothMarkerPositionRef.current = [userPosition[1], userPosition[0]];
+    }
 
     // Remove existing marker if it exists (ensures it's re-added after style change)
     if (markerObjRef.current) {
@@ -364,8 +390,56 @@ export function ZonnaMap3D({
     
     markerRef.current = el;
     markerObjRef.current = new maplibregl.Marker({ element: el })
-      .setLngLat([userPosition[1], userPosition[0]])
+      .setLngLat(smoothMarkerPositionRef.current)
       .addTo(map.current);
+
+    // Smooth animation to new position
+    const targetLng = userPosition[1];
+    const targetLat = userPosition[0];
+    const startLng = smoothMarkerPositionRef.current[0];
+    const startLat = smoothMarkerPositionRef.current[1];
+
+    // Cancel previous animation
+    if (markerAnimationRef.current) {
+      cancelAnimationFrame(markerAnimationRef.current);
+    }
+
+    let startTime: number | null = null;
+    const duration = 500; // 500ms animation
+
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Easing function (ease-out)
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+
+      // Interpolate position
+      const currentLng = startLng + (targetLng - startLng) * easeOut;
+      const currentLat = startLat + (targetLat - startLat) * easeOut;
+
+      smoothMarkerPositionRef.current = [currentLng, currentLat];
+
+      if (markerObjRef.current) {
+        markerObjRef.current.setLngLat(smoothMarkerPositionRef.current);
+      }
+
+      if (progress < 1) {
+        markerAnimationRef.current = requestAnimationFrame(animate);
+      } else {
+        smoothMarkerPositionRef.current = [targetLng, targetLat];
+        markerAnimationRef.current = null;
+      }
+    };
+
+    markerAnimationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (markerAnimationRef.current) {
+        cancelAnimationFrame(markerAnimationRef.current);
+      }
+    };
   }, [userPosition, loaded, mapStyle]);
 
   // Update start position marker and guide line
@@ -475,29 +549,41 @@ export function ZonnaMap3D({
     }
   }, [trailColor, loaded]);
 
-  // Update conquests with nickname data for popup
+  // Update conquests with nickname data for popup - optimized for performance
   useEffect(() => {
     if (!map.current || !loaded) return;
 
     const source = map.current.getSource('conquests') as maplibregl.GeoJSONSource;
     if (!source) return;
 
-    const features = conquests.map((conquest) => ({
-      type: 'Feature' as const,
-      properties: {
-        id: conquest.id,
-        area: conquest.area,
-        nickname: conquest.profile?.nickname || conquest.profile?.name || 'Desconhecido',
-        color: trailColor,
-        selected: conquest.id === selectedConquest?.id,
-      },
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [conquest.path.map(([lat, lng]) => [lng, lat])],
-      },
-    }));
+    // Batch update for better performance with many conquests
+    // Use requestAnimationFrame to avoid blocking UI
+    const updateConquests = () => {
+      const features = conquests.map((conquest) => ({
+        type: 'Feature' as const,
+        properties: {
+          id: conquest.id,
+          area: conquest.area,
+          nickname: conquest.profile?.nickname || conquest.profile?.name || 'Desconhecido',
+          color: trailColor,
+          selected: conquest.id === selectedConquest?.id,
+        },
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [conquest.path.map(([lat, lng]) => [lng, lat])],
+        },
+      }));
 
-    source.setData({ type: 'FeatureCollection', features });
+      source.setData({ type: 'FeatureCollection', features });
+    };
+
+    // Debounce updates for large datasets
+    if (conquests.length > 100) {
+      const timeoutId = setTimeout(updateConquests, 100);
+      return () => clearTimeout(timeoutId);
+    } else {
+      requestAnimationFrame(updateConquests);
+    }
   }, [conquests, selectedConquest, loaded, trailColor]);
 
   // Update heatmap
