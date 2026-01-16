@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ZONNA</string>
+    <string name="title_activity_main">ZONNA</string>
+    <string name="package_name">com.zonna.app</string>
+    <string name="custom_url_scheme">com.zonna.app</string>
+</resources>
