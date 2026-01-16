@@ -1,22 +1,26 @@
 name: Build Android APK
 on:
   push:
-    branches: [ main, master ] # Ele vai rodar quando você enviar o código
+    branches: [ main, master ]
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: set up JDK 17
+      - name: Checkout Source
+        uses: actions/checkout@v4
+
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
-      - name: Grant execute permission for gradlew
-        run: chmod +x android/gradlew
-      - name: Build with Gradle
-        run: cd android && ./gradlew assembleDebug
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
