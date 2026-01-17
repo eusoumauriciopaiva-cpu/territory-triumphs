@@ -11,10 +11,10 @@ const MISSION_TARGETS: Record<MissionType, { target: number; xpReward: number }>
 };
 
 const getTodayDate = () => {
-  const now = new Date();
-  return now.toISOString().split('T')[0];
+  return new Date().toISOString().split('T')[0];
 };
 
+// --- FUNÇÃO 1: ATUALIZAR O PROGRESSO (Quando ele faz a ação) ---
 export async function updateMissionProgress(
   userId: string, 
   type: MissionType, 
@@ -23,40 +23,60 @@ export async function updateMissionProgress(
   const today = getTodayDate();
   const config = MISSION_TARGETS[type];
 
+  const { data: existing } = await supabase
+    .from('user_missions_daily')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('mission_date', today)
+    .eq('mission_type', type)
+    .maybeSingle();
+
+  if (existing) {
+    if (existing.collected) return; // Se já coletou o prêmio, não faz nada
+    const newProgress = Math.min(existing.progress + increment, config.target);
+    await supabase.from('user_missions_daily').update({ progress: newProgress }).eq('id', existing.id);
+  } else {
+    await supabase.from('user_missions_daily').insert({
+      user_id: userId,
+      mission_date: today,
+      mission_type: type,
+      progress: Math.min(increment, config.target),
+      target: config.target,
+      xp_reward: config.xpReward,
+      collected: false,
+    });
+  }
+}
+
+// --- FUNÇÃO 2: COLETAR O PRÊMIO (Quando ele clica no botão) ---
+export async function claimMissionReward(
+  userId: string,
+  missionId: string,
+  xpReward: number
+): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if mission exists for today
-    const { data: existing } = await supabase
+    // 1. Marca como coletado
+    const { error: missionError } = await supabase
       .from('user_missions_daily')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('mission_date', today)
-      .eq('mission_type', type)
-      .maybeSingle();
+      .update({ collected: true })
+      .eq('id', missionId)
+      .eq('user_id', userId);
 
-    if (existing) {
-      // Don't update if already collected
-      if (existing.collected) return;
+    if (missionError) throw missionError;
 
-      const newProgress = Math.min(existing.progress + increment, config.target);
-      await supabase
-        .from('user_missions_daily')
-        .update({ progress: newProgress })
-        .eq('id', existing.id);
-    } else {
-      // Create new mission entry
-      await supabase
-        .from('user_missions_daily')
-        .insert({
-          user_id: userId,
-          mission_date: today,
-          mission_type: type,
-          progress: Math.min(increment, config.target),
-          target: config.target,
-          xp_reward: config.xpReward,
-          collected: false,
-        });
-    }
-  } catch (error) {
-    console.error('Error updating mission progress:', error);
+    // 2. Soma o XP no Perfil (Profiles)
+    const { data: profile } = await supabase.from('profiles').select('xp').eq('user_id', userId).single();
+    const currentXp = profile?.xp || 0;
+
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ xp: currentXp + xpReward })
+      .eq('user_id', userId);
+
+    if (profileError) throw profileError;
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }

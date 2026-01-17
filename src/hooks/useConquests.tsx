@@ -68,7 +68,12 @@ export function useConquests() {
   const myConquests = conquests.filter(c => c.user_id === user?.id);
 
   const addConquest = useMutation({
-    mutationFn: async (conquest: { path: [number, number][]; area: number; distance: number }) => {
+    mutationFn: async (conquest: { 
+      path: [number, number][]; 
+      area: number; 
+      distance: number;
+      map_preview_url?: string; // Adicionamos isso para receber a imagem
+    }) => {
       if (!user) throw new Error('Not authenticated');
       
       const { data, error } = await supabase
@@ -78,11 +83,14 @@ export function useConquests() {
           path: conquest.path,
           area: conquest.area,
           distance: conquest.distance,
+          // AQUI É O SEGREDO: salvamos a imagem do mapa que veio da gravação
+          map_preview_url: conquest.map_preview_url, 
         })
         .select()
         .single();
       
       if (error) throw error;
+
 
       // Detect conflicts with other users' territories
       try {
