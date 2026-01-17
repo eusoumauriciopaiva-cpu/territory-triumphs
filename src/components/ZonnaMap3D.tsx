@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Conquest } from '@/types';
-import { 
-  getMapStyleUrl, 
-  applyStandardStyleOverrides, 
+import {
+  getMapStyleUrl,
+  applyStandardStyleOverrides,
   needsStandardOverrides,
-  type MapStyleType 
+  type MapStyleType
 } from '@/lib/mapStyle';
 
 interface ZonnaMap3DProps {
@@ -191,31 +191,37 @@ export function ZonnaMap3D({
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: getMapStyleUrl(mapStyle),
+      // ESTE É O BLOCO QUE CORRIGE O MAPA BRANCO:
+      style: {
+        version: 8,
+        sources: {
+          'osm': {
+            type: 'raster',
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution: '&copy; OpenStreetMap Contributors',
+          }
+        },
+        layers: [
+          {
+            id: 'osm-tiles',
+            type: 'raster',
+            source: 'osm',
+            minzoom: 0,
+            maxzoom: 19
+          }
+        ]
+      },
       center: [initialCenter[1], initialCenter[0]],
       zoom: 16,
-      pitch: 0, // Flat 2D view - no tilt
+      pitch: 0,
       bearing: 0,
       antialias: true,
-      maxPitch: 0, // Lock pitch to prevent tilting
-      pitchWithRotate: false, // Disable pitch with rotate gesture
-      // Performance optimizations
-      renderWorldCopies: false, // Don't render multiple world copies
-      maxTileCacheSize: 50, // Cache up to 50 tiles
-      fadeDuration: 0, // Disable fade for better performance
-      // Enable tile caching
-      transformRequest: (url: string, resourceType: string) => {
-        // Enable caching for tile requests
-        if (resourceType === 'Tile') {
-          return {
-            url,
-            headers: {
-              'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
-            },
-          };
-        }
-        return { url };
-      },
+      maxPitch: 0,
+      pitchWithRotate: false,
+      renderWorldCopies: false,
+      maxTileCacheSize: 50,
+      fadeDuration: 0,
     });
 
     map.current.on('load', () => {
@@ -235,16 +241,16 @@ export function ZonnaMap3D({
       // Add click handler for conquests
       map.current.on('click', 'conquests-fill', (e) => {
         if (!e.features || e.features.length === 0) return;
-        
+
         const feature = e.features[0];
         const nickname = feature.properties?.nickname || 'Desconhecido';
         const area = feature.properties?.area || 0;
-        
+
         // Remove existing popup
         if (popupRef.current) {
           popupRef.current.remove();
         }
-        
+
         // Create popup with clean design
         popupRef.current = new maplibregl.Popup({
           closeButton: false,
@@ -302,7 +308,7 @@ export function ZonnaMap3D({
   // Handle style changes dynamically
   useEffect(() => {
     if (!map.current || !loaded) return;
-    
+
     // Only update if style actually changed
     if (currentStyleRef.current === mapStyle) return;
     currentStyleRef.current = mapStyle;
@@ -387,7 +393,7 @@ export function ZonnaMap3D({
       <div class="zonna-pulse-ring zonna-pulse-ring-2"></div>
       <div class="zonna-marker-core"></div>
     `;
-    
+
     markerRef.current = el;
     markerObjRef.current = new maplibregl.Marker({ element: el })
       .setLngLat(smoothMarkerPositionRef.current)
@@ -450,7 +456,7 @@ export function ZonnaMap3D({
     if (startMarkerRef.current) {
       try {
         startMarkerRef.current.remove();
-      } catch (e) {}
+      } catch (e) { }
       startMarkerRef.current = null;
     }
 
@@ -491,7 +497,7 @@ export function ZonnaMap3D({
             </svg>
           </div>
         `;
-        
+
         startMarkerRef.current = new maplibregl.Marker({ element: startEl })
           .setLngLat([startPosition[1], startPosition[0]])
           .addTo(map.current);
@@ -542,7 +548,7 @@ export function ZonnaMap3D({
     if (map.current.getLayer('recording-path-glow')) {
       map.current.setPaintProperty('recording-path-glow', 'line-color', trailColor);
     }
-    
+
     // Update main line color
     if (map.current.getLayer('recording-path-line')) {
       map.current.setPaintProperty('recording-path-line', 'line-color', trailColor);

@@ -240,7 +240,7 @@ function AppContent() {
   }
 
   // Use clan conquests for map (Fog of War - only see clan members' territories)
-  const visibleConquests = myMemberships.length > 0 ? clanConquests : myConquests;
+  const visibleConquests = conquests;
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
